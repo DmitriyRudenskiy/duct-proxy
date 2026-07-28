@@ -8,22 +8,22 @@ pub enum ProxyError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("No SNI in ClientHello")]
+    #[error("no SNI in ClientHello")]
     NoSni,
 
-    #[error("Invalid SNI: {0}")]
+    #[error("invalid SNI: {0}")]
     InvalidSni(String),
 
-    #[error("Certificate generation failed: {0}")]
+    #[error("certificate generation failed: {0}")]
     CertGeneration(String),
 
-    #[error("TLS configuration error: {0}")]
+    #[error("TLS config error: {0}")]
     TlsConfig(String),
 
     #[error("TLS handshake failed: {0}")]
     TlsHandshake(String),
 
-    #[error("Upstream TLS error: {0}")]
+    #[error("upstream TLS failed: {0}")]
     UpstreamTls(String),
 
     #[error("Connection error: {0}")]
