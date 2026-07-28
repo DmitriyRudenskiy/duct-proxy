@@ -238,9 +238,9 @@ impl Message {
 
     /// Encode body with the given encoding (gzip, deflate, identity, br, zstd).
     ///
-    /// In v1 this is a stub that just sets the header.
-    pub fn encode(&mut self, _encoding: &str) {
-        // Full implementation would compress the body. Stub for v1.
+    /// Sets the Content-Encoding header. Full compression implementation is deferred.
+    pub fn encode(&mut self, encoding: &str) {
+        self.headers_mut().insert(0, "content-encoding", encoding);
     }
 }
 

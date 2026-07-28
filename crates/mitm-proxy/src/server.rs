@@ -129,7 +129,8 @@ impl ProxyServer {
 
                     // Spawn connection handler
                     self.join_set.spawn(async move {
-                        if let Err(e) = handle_connection(stream, addr, ca_clone, cert_store_clone, addon_mgr_clone).await {
+                        let result = handle_connection(stream, addr, ca_clone, cert_store_clone, addon_mgr_clone).await;
+                        if let Err(e) = handle_connection_result(result, addr) {
                             error!("Connection handler error from {}: {}", addr, e);
                         }
                         let mut connections = active.lock().await;
@@ -169,6 +170,7 @@ async fn handle_connection(
     let protocol = detect_protocol_from_bytes(&peek_buf[..n]);
     info!("Protocol: {:?} from {}", protocol, peer_addr);
     
+    // Handle connection based on protocol
     match protocol {
         Protocol::HttpConnect => {
             // CONNECT example.com:443 HTTP/1.1
@@ -234,6 +236,20 @@ async fn handle_connection(
     }
     
     Ok(())
+}
+
+/// Handle result from connection handler, filtering out client disconnects.
+fn handle_connection_result(
+    result: Result<(), ProxyError>,
+    peer_addr: std::net::SocketAddr,
+) -> Result<(), ProxyError> {
+    match result {
+        Err(ProxyError::Io(e)) if e.kind() == std::io::ErrorKind::ConnectionReset => {
+            tracing::debug!("Client disconnected: {}", peer_addr);
+            Ok(())
+        }
+        other => other,
+    }
 }
 
 #[cfg(test)]

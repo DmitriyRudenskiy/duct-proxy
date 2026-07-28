@@ -186,7 +186,9 @@ impl HttpForwarder {
         let path = url
             .trim_start_matches("http://")
             .find('/')
-            .map(|i| &url[url.find("://").unwrap() + 3 + i..])
+            .and_then(|i| {
+                url.find("://").map(|pos| &url[pos + 3 + i..])
+            })
             .unwrap_or("/");
         let rewritten = request_str.replacen(url, path, 1);
         
@@ -258,12 +260,32 @@ impl HttpForwarder {
         client_stream.flush().await
             .map_err(|e| crate::error::ProxyError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
         
-        // Per-flow logging
-        let status = if let Some(pos) = total.windows(12).position(|w| w == b"HTTP/1.1 ") {
-            String::from_utf8_lossy(&total[pos+9..pos+12]).trim().parse::<u16>().unwrap_or(0)
-        } else {
-            0
-        };
+        // 8. Handle keep-alive: close connection if "Connection: close" header present
+        let has_connection_close = total.windows(17)
+            .any(|w| w.eq_ignore_ascii_case(b"connection: close\r\n"));
+        let has_keep_alive = total.windows(20)
+            .any(|w| w.eq_ignore_ascii_case(b"connection: keep-alive\r\n"));
+        
+        if has_connection_close || (!has_keep_alive && !has_connection_close) {
+            // HTTP/1.1 default is keep-alive, but if server said close, close it
+            if has_connection_close {
+                tracing::debug!("Connection: close from upstream, closing client connection");
+                // Gracefully shutdown the write half to signal close
+                use tokio::io::AsyncWriteExt;
+                let _ = client_stream.shutdown().await;
+            }
+        }
+        
+        // Per-flow logging - parse status code from response
+        let status = total
+            .windows(12)
+            .find_map(|w| {
+                let line = String::from_utf8_lossy(w);
+                if line.starts_with("HTTP/1.") {
+                    line.split_whitespace().nth(1).and_then(|s| s.parse::<u16>().ok())
+                } else { None }
+            })
+            .unwrap_or(0);
         
         tracing::info!(
             method = %parts.get(0).unwrap_or(&"UNKNOWN"),
