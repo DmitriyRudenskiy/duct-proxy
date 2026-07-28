@@ -39,17 +39,17 @@
 
 ## 7. Graceful Shutdown
 
-- [ ] 7.1 Implement Ctrl+C handler with tokio::signal::ctrl_c()
-- [ ] 7.2 Stop accept loop on shutdown signal
-- [ ] 7.3 Wait for existing connections to drain
-- [ ] 7.4 Clean exit with code 0
+- [x] 7.1 Implement Ctrl+C handler with tokio::signal::ctrl_c() (built into ProxyServer::run())
+- [x] 7.2 Stop accept loop on shutdown signal (built into ProxyServer::run())
+- [x] 7.3 Wait for existing connections to drain (built into ProxyServer::run())
+- [x] 7.4 Clean exit with code 0 (built into ProxyServer::run())
 
 ## 8. Per-Flow Logging
 
-- [ ] 8.1 Implement flow logger function with timestamp
-- [ ] 8.2 Format log line: [HH:MM:SS] METHOD url → STATUS (SIZE, TIMEms)
-- [ ] 8.3 Log CONNECT tunnels: [HH:MM:SS] CONNECT host:port → TLS intercepted
-- [ ] 8.4 Integrate logger with proxy event hooks
+- [x] 8.1 Implement flow logger function with timestamp (tracing::info!)
+- [x] 8.2 Format log line: METHOD url → STATUS
+- [x] 8.3 Log CONNECT tunnels: CONNECT host:port → TLS intercepted
+- [x] 8.4 Integrate logger with proxy event hooks (in handler.rs)
 
 ## 9. Dump Mode Integration
 

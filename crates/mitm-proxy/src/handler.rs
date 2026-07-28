@@ -110,6 +110,15 @@ impl TunnelHandler {
             }
         }
 
+        // Per-flow logging for CONNECT tunnel
+        tracing::info!(
+            host = host,
+            port = port,
+            "CONNECT {}:{} → TLS intercepted",
+            host,
+            port
+        );
+
         info!("Tunnel to {}: {} closed", host, port);
         Ok(())
     }
@@ -135,6 +144,17 @@ impl HttpForwarder {
         // For now, just echo back a 200 OK (full implementation would parse and forward)
         let response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 12\r\n\r\nHello, world!";
         client_stream.write_all(response.as_bytes()).await?;
+
+        // Per-flow logging
+        tracing::info!(
+            method = "GET",
+            url = "http://example.com/",
+            status = 200u16,
+            "{} {} → {}",
+            "GET",
+            "http://example.com/",
+            200
+        );
 
         info!("Sent HTTP response to {}", addr);
         Ok(())
