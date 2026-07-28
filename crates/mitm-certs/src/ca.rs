@@ -124,8 +124,9 @@ impl CaRoot {
         let cert_pem = self.cert_pem()?;
         let key_pem = self.private_key_pem()?;
 
-        let cert_path = dir.join("ca_root.pem");
-        let key_path = dir.join("ca_key.pem");
+        // Use standard mitmproxy filenames for compatibility
+        let cert_path = dir.join("mitmproxy-ca-cert.pem");
+        let key_path = dir.join("mitmproxy-ca-key.pem");
 
         std::fs::write(&cert_path, cert_pem)?;
         std::fs::write(&key_path, key_pem)?;
@@ -142,10 +143,10 @@ impl CaRoot {
 
     /// Load CA from directory (~/.mitmproxy/).
     ///
-    /// Expects ca_root.pem and ca_key.pem files.
+    /// Expects mitmproxy-ca-cert.pem and mitmproxy-ca-key.pem files.
     pub fn load(dir: &Path) -> Result<Self, CaError> {
-        let cert_path = dir.join("ca_root.pem");
-        let key_path = dir.join("ca_key.pem");
+        let cert_path = dir.join("mitmproxy-ca-cert.pem");
+        let key_path = dir.join("mitmproxy-ca-key.pem");
 
         if !cert_path.exists() || !key_path.exists() {
             return Err(CaError::NotFound {

@@ -20,7 +20,7 @@
 
 - [x] 4.1 Initialize CaRoot (load or generate)
 - [ ] 4.2 Initialize CertStore with LRU eviction (deferred)
-- [x] 4.3 Generate and save CA certificate to ~/.mitmproxy/
+- [x] 4.3 Generate and save CA certificate to ~/.mitmproxy/ (fixed filename: mitmproxy-ca-cert.pem)
 - [x] 4.4 Log CA certificate path on startup
 
 ## 5. Addon Registration

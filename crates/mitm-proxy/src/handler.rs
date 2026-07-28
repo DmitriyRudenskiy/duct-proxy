@@ -139,9 +139,13 @@ impl HttpForwarder {
         let n = client_stream.read(&mut buf).await?;
         let request = std::str::from_utf8(&buf[..n])?;
 
-        debug!("Received HTTP request:\n{}", request);
+        debug!("Received HTTP request ({} bytes):\n{}", n, request);
 
-        // For now, just echo back a 200 OK (full implementation would parse and forward)
+        // TODO: Full implementation would parse the request, connect to upstream,
+        // forward the request, read the response, and write it back to client.
+        // For now, return a stub response to avoid empty reply.
+        debug!("Stub response (full forwarding not yet implemented)");
+
         let response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 12\r\n\r\nHello, world!";
         client_stream.write_all(response.as_bytes()).await?;
 
@@ -156,7 +160,7 @@ impl HttpForwarder {
             200
         );
 
-        info!("Sent HTTP response to {}", addr);
+        info!("Sent HTTP response (stub) to {}", addr);
         Ok(())
     }
 }
@@ -167,6 +171,8 @@ pub async fn handle_connection(
     addr: SocketAddr,
     protocol: Protocol,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    debug!("Protocol detected: {:?} from {}", protocol, addr);
+    
     match protocol {
         Protocol::Tls => {
             info!("TLS connection from {}", addr);
