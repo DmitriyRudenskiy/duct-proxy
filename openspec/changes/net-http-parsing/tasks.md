@@ -43,7 +43,7 @@
 
 - [x] 6.1 Define `HttpRequest` and `HttpResponse` structs with parsed fields
 - [x] 6.2 Implement `HttpRequest::parse(stream: &mut impl AsyncRead) -> Result<Self>`
-- [ ] 6.3 Implement `HttpResponse::parse(stream: &mut impl AsyncRead) -> Result<Self>` (stub)
+- [x] 6.3 Implement `HttpResponse::parse(stream: &mut impl AsyncRead) -> Result<Self>`
 - [x] 6.4 Implement body reading based on Transfer-Encoding or Content-Length
 - [x] 6.5 Implement `HttpRequest::to_bytes() -> Vec<u8>` and `HttpResponse::to_bytes() -> Vec<u8>`
 - [x] 6.6 Write unit tests: request line, headers, body, chunked, content-length
