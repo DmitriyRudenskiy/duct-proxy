@@ -6,7 +6,7 @@ use std::path::Path;
 use flate2::read::GzDecoder;
 use thiserror::Error;
 
-use crate::serializer::{FlowSerializer, JsonFlowSerializer, SerializationError};
+use crate::serializer::{FlowSerializer, SerializationError};
 
 /// Errors that can occur during reading.
 #[derive(Error, Debug)]

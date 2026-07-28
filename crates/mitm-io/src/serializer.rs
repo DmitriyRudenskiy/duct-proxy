@@ -1,7 +1,6 @@
 //! FlowSerializer trait and JSON implementation.
 
 use mitm_proxy::HTTPFlow;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// Errors that can occur during serialization.

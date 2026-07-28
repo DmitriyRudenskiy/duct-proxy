@@ -7,7 +7,7 @@ use flate2::write::GzEncoder;
 use flate2::Compression;
 use thiserror::Error;
 
-use crate::serializer::{FlowSerializer, JsonFlowSerializer, SerializationError};
+use crate::serializer::{FlowSerializer, SerializationError};
 
 /// Errors that can occur during writing.
 #[derive(Error, Debug)]
