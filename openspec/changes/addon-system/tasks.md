@@ -16,23 +16,23 @@
 
 ## 3. AddonManager Implementation
 
-- [ ] 3.1 Define `AddonManager` struct with `Vec<Box<dyn Addon>>`
-- [ ] 3.2 Implement `register(addon: Box<dyn Addon>)` method
-- [ ] 3.3 Implement `dispatch_requestheaders(flow: &mut HTTPFlow)`
-- [ ] 3.4 Implement `dispatch_request(flow: &mut HTTPFlow)`
-- [ ] 3.5 Implement `dispatch_responseheaders(flow: &mut HTTPFlow)`
-- [ ] 3.6 Implement `dispatch_response(flow: &mut HTTPFlow)`
-- [ ] 3.7 Implement `dispatch_error(error: &AddonError, flow: Option<&mut Flow>)`
-- [ ] 3.8 Implement error isolation (stop on error, log, continue)
+- [x] 3.1 Define `AddonManager` struct with `Vec<Box<dyn Addon>>`
+- [x] 3.2 Implement `register(addon: Box<dyn Addon>)` method
+- [x] 3.3 Implement `dispatch_requestheaders(flow: &mut Flow)`
+- [x] 3.4 Implement `dispatch_request(flow: &mut Flow)`
+- [x] 3.5 Implement `dispatch_responseheaders(flow: &mut Flow)`
+- [x] 3.6 Implement `dispatch_response(flow: &mut Flow)`
+- [x] 3.7 Implement `dispatch_error(error: &AddonError)`
+- [x] 3.8 Implement error isolation (stop on error, log, continue)
 - [ ] 3.9 Write unit tests: registration, dispatch, error handling
 
 ## 4. Built-in Addon: ModifyHeaders
 
-- [ ] 4.1 Define `ModifyHeaders` struct with add/set/remove operations
-- [ ] 2.2 Implement `requestheaders` hook to modify request headers
-- [ ] 4.3 Implement `responseheaders` hook to modify response headers
-- [ ] 4.4 Support regex-based header name matching
-- [ ] 4.5 Write unit tests: add header, set header, remove header
+- [x] 4.1 Define `ModifyHeaders` struct with add/set/remove operations
+- [x] 4.2 Implement `requestheaders` hook to modify request headers
+- [x] 4.3 Implement `responseheaders` hook to modify response headers
+- [x] 4.4 Support regex-based header name matching
+- [x] 4.5 Write unit tests: add header, set header, remove header (13 tests)
 
 ## 5. Built-in Addon: ModifyBody
 
@@ -45,11 +45,11 @@
 
 ## 6. Built-in Addon: Block
 
-- [ ] 6.1 Define `Block` struct with filter criteria
+- [x] 6.1 Define `Block` struct with filter criteria
 - [ ] 6.2 Implement `requestheaders` hook to check filters
 - [ ] 6.3 Send 403 response when flow matches filter
-- [ ] 6.4 Support URL, header, and source IP filters
-- [ ] 6.5 Write unit tests: block by URL, block by header, block by IP
+- [x] 6.4 Support URL, header, and source IP filters
+- [x] 6.5 Write unit tests: block by URL, block by header, block by IP (6 tests)
 
 ## 7. Built-in Addon: Filter
 
