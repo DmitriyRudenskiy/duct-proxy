@@ -1,4 +1,4 @@
-//! mitm-proxy: concrete flow types for the mitmproxy-rs data model.
+//! mitm-proxy: concrete flow types and proxy engine for mitmproxy-rs.
 //!
 //! This crate provides:
 //! - **Flow enum**: `Flow::Http`, `Flow::Tcp`, `Flow::Udp`, `Flow::Dns`
@@ -7,15 +7,24 @@
 //! - **TCP/UDP messages**: `TCPMessage`, `UDPMessage`
 //! - **DNS types**: `DNSMessage`, `Question`, `ResourceRecord`, `DNSFlow`
 //! - **WebSocket types**: `WebSocketMessage`, `WebSocketData`
+//! - **Proxy server**: TCP listener, accept loop, connection handling
+//! - **Protocol detection**: HTTP vs TLS vs raw TCP classification
+//! - **Hook system**: Extension points for addons
 
 pub mod dns;
 pub mod flows;
+pub mod handler;
+pub mod hooks;
+pub mod server;
 pub mod stream;
 pub mod websocket;
 
 // Re-exports.
 pub use dns::{DNSFlow, DNSMessage, DnsClass, DnsError, DnsType, Question, Rcode, ResourceRecord};
 pub use flows::{Flow, HTTPFlow, TCPFlow, UDPFlow};
+pub use handler::{detect_protocol, Protocol, TunnelHandler, HttpForwarder};
+pub use hooks::{HookDispatcher, HttpRequestHook, HttpResponseHook, ErrorHook};
+pub use server::ProxyServer;
 pub use stream::{TCPMessage, UDPMessage};
 pub use websocket::{WebSocketData, WebSocketMessage, WebSocketOpcode};
 
