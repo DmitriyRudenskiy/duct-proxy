@@ -1,14 +1,16 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! mitm-certs: Certificate management for mitmproxy-rs.
+//!
+//! This crate provides:
+//! - CA certificate generation (ECDSA P-256)
+//! - Certificate store with LRU eviction
+//! - SNI extraction from TLS ClientHello
+//! - On-the-fly leaf certificate generation
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod ca;
+pub mod leaf;
+pub mod sni;
+pub mod store;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use ca::{CaError, CaRoot};
+pub use leaf::{LeafCert, LeafError};
+pub use store::{CertEntry, CertStore, StoreError};
