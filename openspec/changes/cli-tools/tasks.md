@@ -37,6 +37,15 @@
 - [x] 6.2 Bind to listen address and port
 - [x] 6.3 Log listening address on startup
 
+## 7. Wire handle_connection to actual forwarding
+
+- [x] 7.1 Implement handle_connection with protocol detection
+- [x] 7.2 Call detect_protocol_from_bytes() after peek
+- [x] 7.3 For HTTP: call HttpForwarder::forward()
+- [x] 7.4 For CONNECT: write 200, then call intercept_tls()
+- [x] 7.5 For TLS: call intercept_tls() directly
+- [x] 7.6 Pass CA, cert_store, addon_mgr to run() and handle_connection()
+
 ## 7. Graceful Shutdown
 
 - [x] 7.1 Implement Ctrl+C handler with tokio::signal::ctrl_c() (built into ProxyServer::run())

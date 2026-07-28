@@ -1,13 +1,19 @@
 //! Proxy server implementation with TCP listener and accept loop.
 
 use std::sync::Arc;
-use tokio::io::AsyncReadExt;
-use tokio::net::TcpListener;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::Mutex;
 use tokio::task::JoinSet;
-use tracing::{info, error};
+use tracing::{info, error, warn};
 
+use mitm_addons::AddonManager;
+use mitm_certs::{CaRoot, CertStore};
 use mitm_options::Options;
+
+use crate::error::ProxyError;
+use crate::handler::{detect_protocol_from_bytes, HttpForwarder, Protocol};
+use crate::tls::{intercept_tls, forward_bidirectional};
 
 /// Proxy server configuration.
 #[derive(Clone, Debug)]
@@ -68,15 +74,21 @@ impl ProxyServer {
         Ok(listener)
     }
 
-    /// Run the accept loop, handling connections until shutdown.
-    pub async fn run(mut self, listener: TcpListener) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    /// Run the accept loop with CA, cert store, and addon manager.
+    pub async fn run(
+        mut self,
+        listener: TcpListener,
+        ca: Arc<CaRoot>,
+        cert_store: Arc<Mutex<CertStore>>,
+        addon_mgr: Arc<Mutex<AddonManager>>,
+    ) -> Result<(), ProxyError> {
         info!("Starting accept loop...");
 
         // Handle graceful shutdown
         let shutdown = tokio::signal::ctrl_c();
 
         tokio::select! {
-            result = self.accept_loop(listener) => {
+            result = self.accept_loop(listener, ca, cert_store, addon_mgr) => {
                 result?;
             }
             _ = shutdown => {
@@ -93,10 +105,16 @@ impl ProxyServer {
     }
 
     /// Accept loop: accept connections and spawn handlers.
-    async fn accept_loop(&mut self, listener: TcpListener) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    async fn accept_loop(
+        &mut self,
+        listener: TcpListener,
+        ca: Arc<CaRoot>,
+        cert_store: Arc<Mutex<CertStore>>,
+        addon_mgr: Arc<Mutex<AddonManager>>,
+    ) -> Result<(), ProxyError> {
         loop {
             match listener.accept().await {
-                Ok((mut stream, addr)) => {
+                Ok((stream, addr)) => {
                     info!("New connection from {}", addr);
 
                     let active = Arc::clone(&self.active_connections);
@@ -104,23 +122,18 @@ impl ProxyServer {
                     *connections += 1;
                     drop(connections);
 
-                    let mut join_set = tokio::task::JoinSet::new();
-                    join_set.spawn(async move {
-                        // Connection handler would go here
-                        info!("Handling connection from {}", addr);
-                        // For now, just read and discard
-                        let mut buf = vec![0u8; 4096];
-                        match stream.read(&mut buf).await {
-                            Ok(n) => info!("Read {} bytes from {}", n, addr),
-                            Err(e) => error!("Read error from {}: {}", addr, e),
+                    // Clone Arc references for the async block
+                    let ca_clone = Arc::clone(&ca);
+                    let cert_store_clone = Arc::clone(&cert_store);
+                    let addon_mgr_clone = Arc::clone(&addon_mgr);
+
+                    // Spawn connection handler
+                    self.join_set.spawn(async move {
+                        if let Err(e) = handle_connection(stream, addr, ca_clone, cert_store_clone, addon_mgr_clone).await {
+                            error!("Connection handler error from {}: {}", addr, e);
                         }
                         let mut connections = active.lock().await;
                         *connections -= 1;
-                    });
-
-                    // Store the join handle for later
-                    self.join_set.spawn(async move {
-                        join_set.join_next().await;
                     });
                 }
                 Err(e) => {
@@ -135,6 +148,92 @@ impl ProxyServer {
     pub async fn active_connections(&self) -> usize {
         *self.active_connections.lock().await
     }
+}
+
+/// Handle a connection based on detected protocol.
+async fn handle_connection(
+    mut stream: TcpStream,
+    peer_addr: std::net::SocketAddr,
+    ca: Arc<CaRoot>,
+    cert_store: Arc<Mutex<CertStore>>,
+    _addon_mgr: Arc<Mutex<AddonManager>>,
+) -> Result<(), ProxyError> {
+    // 1. Peek first bytes to detect protocol
+    let mut peek_buf = [0u8; 8192];
+    let n = stream.peek(&mut peek_buf).await
+        .map_err(|e| ProxyError::Io(e.into()))?;
+    if n == 0 { return Ok(()); }
+    
+    info!("Read {} bytes from {}", n, peer_addr);
+    
+    let protocol = detect_protocol_from_bytes(&peek_buf[..n]);
+    info!("Protocol: {:?} from {}", protocol, peer_addr);
+    
+    match protocol {
+        Protocol::HttpConnect => {
+            // CONNECT example.com:443 HTTP/1.1
+            // 1. Read the full CONNECT request
+            let mut buf = [0u8; 8192];
+            let n = stream.read(&mut buf).await
+                .map_err(|e| ProxyError::Io(e.into()))?;
+            let request = String::from_utf8_lossy(&buf[..n]);
+            
+            // 2. Parse target host:port
+            let target = request.lines().next()
+                .and_then(|l| l.split_whitespace().nth(1))
+                .unwrap_or("");
+            info!("CONNECT tunnel to: {}", target);
+            
+            // 3. Respond 200 Connection Established
+            stream.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n").await
+                .map_err(|e| ProxyError::Io(e.into()))?;
+            stream.flush().await
+                .map_err(|e| ProxyError::Io(e.into()))?;
+            
+            // 4. TLS interception (MITM)
+            let mut store = cert_store.lock().await;
+            match intercept_tls(stream, &ca, &mut store, None).await {
+                Ok((client_tls, upstream_tls, sni)) => {
+                    info!("TLS intercepted: {}", sni);
+                    // 5. Forward bidirectionally
+                    forward_bidirectional(client_tls, upstream_tls).await?;
+                }
+                Err(e) => {
+                    error!("TLS interception failed: {}", e);
+                }
+            }
+        }
+        
+        Protocol::Http => {
+            // Plain HTTP: GET http://example.com/ HTTP/1.1
+            let mut buf = [0u8; 65536];
+            let n = stream.read(&mut buf).await
+                .map_err(|e| ProxyError::Io(e.into()))?;
+            
+            let forwarder = HttpForwarder;
+            forwarder.forward(&mut stream, &buf[..n]).await?;
+        }
+        
+        Protocol::Tls => {
+            // Direct TLS (transparent mode) — same as CONNECT but no 200 response
+            let mut store = cert_store.lock().await;
+            match intercept_tls(stream, &ca, &mut store, None).await {
+                Ok((client_tls, upstream_tls, sni)) => {
+                    info!("TLS intercepted (transparent): {}", sni);
+                    forward_bidirectional(client_tls, upstream_tls).await?;
+                }
+                Err(e) => {
+                    error!("TLS interception failed: {}", e);
+                }
+            }
+        }
+        
+        Protocol::Raw => {
+            warn!("Unknown protocol from {}, closing", peer_addr);
+        }
+    }
+    
+    Ok(())
 }
 
 #[cfg(test)]

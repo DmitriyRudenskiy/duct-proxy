@@ -18,7 +18,41 @@ pub enum Protocol {
     Raw,
 }
 
-/// Detect protocol from first bytes of a TCP stream.
+/// Detect protocol from first bytes (sync version for use with peeked data).
+pub fn detect_protocol_from_bytes(bytes: &[u8]) -> Protocol {
+    if bytes.is_empty() {
+        return Protocol::Raw;
+    }
+
+    // Check for TLS (first byte 0x16 = Handshake record type)
+    if bytes[0] == 0x16 {
+        return Protocol::Tls;
+    }
+
+    // Check for HTTP CONNECT
+    if bytes.len() >= 8 {
+        let prefix = std::str::from_utf8(&bytes[..8]).unwrap_or("");
+        if prefix.eq_ignore_ascii_case("CONNECT ") {
+            return Protocol::HttpConnect;
+        }
+    }
+
+    // Check for HTTP methods
+    let http_methods = ["GET ", "POST ", "PUT ", "DELETE ", "PATCH ", "HEAD ", "OPTIONS ", "TRACE "];
+    if bytes.len() >= 4 {
+        let prefix = std::str::from_utf8(&bytes[..4]).unwrap_or("");
+        for method in &http_methods {
+            if prefix.eq_ignore_ascii_case(method) {
+                return Protocol::Http;
+            }
+        }
+    }
+
+    // Default to Raw TCP
+    Protocol::Raw
+}
+
+/// Detect protocol from first bytes of a TCP stream (async version).
 ///
 /// # Arguments
 /// * `stream` - Mutable reference to TCP stream
@@ -28,33 +62,7 @@ pub enum Protocol {
 pub async fn detect_protocol(stream: &mut TcpStream) -> Result<Protocol, Box<dyn std::error::Error + Send + Sync>> {
     let mut peek_buf = [0u8; 8];
     stream.peek(&mut peek_buf).await?;
-
-    // Check for TLS (first byte 0x16 = Handshake record type)
-    if peek_buf[0] == 0x16 {
-        return Ok(Protocol::Tls);
-    }
-
-    // Check for HTTP CONNECT
-    if peek_buf.len() >= 8 {
-        let prefix = std::str::from_utf8(&peek_buf[..8]).unwrap_or("");
-        if prefix.eq_ignore_ascii_case("CONNECT ") {
-            return Ok(Protocol::HttpConnect);
-        }
-    }
-
-    // Check for HTTP methods
-    let http_methods = ["GET ", "POST ", "PUT ", "DELETE ", "PATCH ", "HEAD ", "OPTIONS ", "TRACE "];
-    if peek_buf.len() >= 4 {
-        let prefix = std::str::from_utf8(&peek_buf[..4]).unwrap_or("");
-        for method in &http_methods {
-            if prefix.eq_ignore_ascii_case(method) {
-                return Ok(Protocol::Http);
-            }
-        }
-    }
-
-    // Default to Raw TCP
-    Ok(Protocol::Raw)
+    Ok(detect_protocol_from_bytes(&peek_buf))
 }
 
 /// Handler for CONNECT tunnels.

@@ -5,10 +5,12 @@
 
 use clap::Parser;
 use mitm_addons::{AddonManager, Block, ModifyHeaders};
-use mitm_certs::CaRoot;
+use mitm_certs::{CaRoot, CertStore};
 use mitm_options::Options;
 use mitm_proxy::ProxyServer;
 use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tracing::info;
 
 /// Mitmproxy-rs CLI: Interactive HTTPS proxy
@@ -99,7 +101,7 @@ async fn main() {
     // Initialize CA: try to load, if fails generate new one.
     let ca_dir = PathBuf::from(&opts.conf_dir);
     let ca_result = CaRoot::load(&ca_dir);
-    let _ca = match ca_result {
+    let ca = match ca_result {
         Ok(ca) => {
             info!("CA loaded from {:?}", ca_dir);
             ca
@@ -121,9 +123,13 @@ async fn main() {
             ca
         }
     };
+    let ca = Arc::new(ca);
+
+    // Initialize certificate store.
+    let cert_store = Arc::new(Mutex::new(CertStore::new(1000)));
 
     // Create addon manager and register built-in addons.
-    let _addon_mgr = AddonManager::new();
+    let addon_mgr = Arc::new(Mutex::new(AddonManager::new()));
     let _modify_headers = ModifyHeaders::new();
     let _block = Block::new();
 
@@ -145,8 +151,8 @@ async fn main() {
         }
     };
 
-    // Run the proxy server (handles graceful shutdown internally).
-    if let Err(e) = server.run(listener).await {
+    // Run the proxy server with CA, cert store, and addon manager.
+    if let Err(e) = server.run(listener, ca, cert_store, addon_mgr).await {
         tracing::error!("Server error: {}", e);
         std::process::exit(1);
     }
