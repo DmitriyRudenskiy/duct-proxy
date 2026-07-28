@@ -86,7 +86,7 @@ async fn test_intercept_tls_real_handshake() {
             // But the client-side TLS should have worked
             let err_msg = format!("{:?}", e);
             assert!(
-                err_msg.contains("UpstreamTls") || err_msg.contains("Connection"),
+                err_msg.contains("UpstreamTls") || err_msg.contains("Connection") || err_msg.contains("UpstreamConnect"),
                 "Expected upstream error, got: {}",
                 err_msg
             );

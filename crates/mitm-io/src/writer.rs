@@ -66,6 +66,7 @@ impl<S: FlowSerializer> Drop for FlowWriter<S> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::serializer::JsonFlowSerializer;
     use mitm_core::connection::{Client, Server};
     use mitm_core::flow::FlowBase;
     use mitm_net::http::{Request, Response};

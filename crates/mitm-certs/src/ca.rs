@@ -221,8 +221,8 @@ mod tests {
         ca.save(dir.path()).unwrap();
 
         // Verify files exist
-        assert!(dir.path().join("ca_root.pem").exists());
-        assert!(dir.path().join("ca_key.pem").exists());
+        assert!(dir.path().join("mitmproxy-ca-cert.pem").exists());
+        assert!(dir.path().join("mitmproxy-ca-key.pem").exists());
 
         // Load
         let loaded = CaRoot::load(dir.path()).unwrap();
