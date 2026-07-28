@@ -7,3 +7,14 @@ edition = "2024"
 mitm-core = { path = "../mitm-core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+http = { workspace = true }
+bytes = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+h2 = { workspace = true }
+url = "2"
+cookie = "0.18"
+form_urlencoded = "1"
+mime = "0.3"
+mime_guess = "2"
+thiserror = "2"
+tracing = { workspace = true }
