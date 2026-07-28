@@ -104,6 +104,27 @@ impl CertStore {
         }
     }
 
+    /// Get a certificate from the store by domain, generating it if not found.
+    ///
+    /// Updates the access time on retrieval.
+    ///
+    /// # Arguments
+    /// * `domain` - Domain name
+    /// * `ca` - CA root for certificate generation
+    ///
+    /// # Returns
+    /// Some(LeafCert) if found or generated
+    pub fn get_or_generate(
+        &mut self,
+        domain: &str,
+        ca: &CaRoot,
+    ) -> Result<LeafCert, StoreError> {
+        if let Some(cert) = self.get(domain) {
+            return Ok(cert);
+        }
+        self.insert(ca, domain)
+    }
+
     /// Get a certificate from the store by domain.
     ///
     /// Updates the access time on retrieval.

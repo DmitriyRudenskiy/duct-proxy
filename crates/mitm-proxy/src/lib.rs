@@ -12,6 +12,7 @@
 //! - **Hook system**: Extension points for addons
 
 pub mod dns;
+pub mod error;
 pub mod flows;
 pub mod handler;
 pub mod hooks;
@@ -27,7 +28,7 @@ pub use handler::{detect_protocol, Protocol, TunnelHandler, HttpForwarder};
 pub use hooks::{HookDispatcher, HttpRequestHook, HttpResponseHook, ErrorHook};
 pub use server::ProxyServer;
 pub use stream::{TCPMessage, UDPMessage};
-pub use tls::{MitmTlsInterceptor, TlsInterceptionResult};
+pub use tls::{intercept_tls, forward_bidirectional};
 pub use websocket::{WebSocketData, WebSocketMessage, WebSocketOpcode};
 
 // Re-export core and net for convenience.
