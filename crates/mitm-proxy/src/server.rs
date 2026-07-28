@@ -7,6 +7,8 @@ use tokio::sync::Mutex;
 use tokio::task::JoinSet;
 use tracing::{info, error};
 
+use mitm_options::Options;
+
 /// Proxy server configuration.
 #[derive(Clone, Debug)]
 pub struct ProxyConfig {
@@ -46,6 +48,17 @@ impl ProxyServer {
             join_set: JoinSet::new(),
             active_connections: Arc::new(Mutex::new(0)),
         }
+    }
+
+    /// Create a ProxyServer from Options struct.
+    pub fn from_options(opts: &Options) -> Result<Self, String> {
+        let addr = format!("{}:{}", opts.listen_host, opts.listen_port);
+        let config = ProxyConfig {
+            listen_addr: addr,
+            max_connections: 1000,
+            tls_interception: !opts.ssl_insecure,
+        };
+        Ok(Self::new(config))
     }
 
     /// Bind to the configured address and return a TcpListener.
@@ -145,5 +158,12 @@ mod tests {
         let listener = server.bind().await.unwrap();
         let addr = listener.local_addr().unwrap();
         assert!(addr.port() > 0);
+    }
+
+    #[test]
+    fn test_proxy_server_from_options() {
+        let opts = Options::default();
+        let server = ProxyServer::from_options(&opts);
+        assert!(server.is_ok());
     }
 }

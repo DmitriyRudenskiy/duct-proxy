@@ -870,6 +870,7 @@ dependencies = [
  "mitm-certs",
  "mitm-core",
  "mitm-net",
+ "mitm-options",
  "pem",
  "pkcs8",
  "rustls",

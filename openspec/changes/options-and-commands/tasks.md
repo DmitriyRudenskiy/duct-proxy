@@ -68,10 +68,10 @@
 
 ## 9. Integration with mitm-proxy
 
-- [ ] 9.1 Update `ProxyServer::bind()` to accept `&Options`
-- [ ] 9.2 Extract listen_host, listen_port, mode from Options
-- [ ] 9.3 Update mitm-proxy Cargo.toml to depend on mitm-options
-- [ ] 9.4 Write integration test: proxy with Options struct
+- [x] 9.1 Update `ProxyServer::bind()` to accept `&Options` (via from_options)
+- [x] 9.2 Extract listen_host, listen_port, mode from Options
+- [x] 9.3 Update mitm-proxy Cargo.toml to depend on mitm-options
+- [x] 9.4 Write integration test: proxy with Options struct (1 test)
 
 ## 10. Integration with mitm-cli
 
