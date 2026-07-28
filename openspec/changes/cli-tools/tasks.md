@@ -77,6 +77,13 @@
 - [x] 10.4 Handle upstream read errors gracefully
 - [x] 10.5 Send partial response on timeout
 
+## 11. Connect Timeout & 502 Handling
+
+- [x] 11.1 Wrap TcpStream::connect in 5-second timeout
+- [x] 11.2 Return error on connection timeout
+- [x] 11.3 Check if total is empty after reading response
+- [x] 11.4 Return 502 Bad Gateway if no response received
+
 ## 9. Dump Mode Integration
 
 - [ ] 9.1 Create FlowWriter when --dump is specified

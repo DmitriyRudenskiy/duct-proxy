@@ -166,8 +166,12 @@ impl HttpForwarder {
         
         tracing::info!("Forwarding to upstream: {}", addr);
         
-        // 3. Connect to upstream
-        let mut upstream = TcpStream::connect(&addr).await
+        // 3. Connect to upstream with timeout
+        let mut upstream = tokio::time::timeout(
+            tokio::time::Duration::from_secs(5),
+            TcpStream::connect(&addr),
+        ).await
+            .map_err(|_| crate::error::ProxyError::UpstreamConnect(format!("timeout connecting to {}", addr)))?
             .map_err(|e| crate::error::ProxyError::UpstreamConnect(e.to_string()))?;
         
         // 4. Rewrite request: absolute URL → relative path
@@ -227,6 +231,18 @@ impl HttpForwarder {
         }
         
         tracing::debug!("Response received from upstream ({} bytes)", total.len());
+        
+        // If no response received, return 502 Bad Gateway
+        if total.is_empty() {
+            let resp = b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 15\r\nConnection: close\r\n\r\n502 Bad Gateway";
+            client_stream.write_all(resp).await
+                .map_err(|e| crate::error::ProxyError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            client_stream.flush().await
+                .map_err(|e| crate::error::ProxyError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            
+            tracing::warn!("No response received from upstream {}", addr);
+            return Ok(());
+        }
         
         // 7. Write response to client
         client_stream.write_all(&total).await
