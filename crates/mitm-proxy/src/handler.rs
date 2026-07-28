@@ -186,29 +186,42 @@ impl HttpForwarder {
         
         tracing::debug!("Request sent to upstream ({} bytes)", rewritten.len());
         
-        // 6. Read response from upstream
-        let mut response_buf = vec![0u8; 65536];
+        // 6. Read response — read until connection close or timeout
         let mut total = Vec::new();
+        let mut buf = [0u8; 65536];
+        
         loop {
-            let n = upstream.read(&mut response_buf).await
-                .map_err(|e| crate::error::ProxyError::UpstreamRead(e.to_string()))?;
-            if n == 0 { break; }
-            total.extend_from_slice(&response_buf[..n]);
-            // Simple heuristic: if we've received headers + body
-            if total.windows(4).any(|w| w == b"\r\n\r\n") {
-                // Check Content-Length
-                let header_end = total.windows(4).position(|w| w == b"\r\n\r\n").unwrap();
-                let headers = String::from_utf8_lossy(&total[..header_end]);
-                if let Some(cl) = headers.lines().find(|l| l.to_lowercase().starts_with("content-length:")) {
-                    if let Ok(cl) = cl[15..].trim().parse::<usize>() {
-                        if total.len() >= header_end + 4 + cl {
-                            break;
+            let read_result = tokio::time::timeout(
+                tokio::time::Duration::from_secs(10),
+                upstream.read(&mut buf),
+            ).await;
+            
+            match read_result {
+                Ok(Ok(0)) => break,      // connection closed
+                Ok(Ok(n)) => {
+                    total.extend_from_slice(&buf[..n]);
+                    // Если получили полные headers + chunked body с terminal chunk
+                    if total.windows(5).any(|w| w == b"0\r\n\r\n") {
+                        break;  // chunked encoding complete
+                    }
+                    // Если получили Content-Length body полностью
+                    if let Some(header_end) = total.windows(4).position(|w| w == b"\r\n\r\n") {
+                        let headers = String::from_utf8_lossy(&total[..header_end]);
+                        if let Some(cl_line) = headers.lines().find(|l| l.to_lowercase().starts_with("content-length:")) {
+                            let expected: usize = cl_line.split(':').nth(1).unwrap_or("0").trim().parse().unwrap_or(0);
+                            if total.len() >= header_end + 4 + expected {
+                                break;
+                            }
                         }
                     }
                 }
-                // If no Content-Length, wait for more data (simplified)
-                if total.len() < header_end + 4 + 100 {
-                    continue;
+                Ok(Err(e)) => {
+                    tracing::warn!("Upstream read error: {}", e);
+                    break;
+                }
+                Err(_) => {
+                    tracing::debug!("Read timeout, sending what we have ({} bytes)", total.len());
+                    break;
                 }
             }
         }

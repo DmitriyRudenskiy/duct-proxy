@@ -69,6 +69,14 @@
 - [x] 9.5 Read response from upstream and write to client
 - [x] 9.6 Add debug logging for each step
 
+## 10. Handle Chunked Responses
+
+- [x] 10.1 Add timeout to upstream reads (10 seconds)
+- [x] 10.2 Detect chunked encoding (terminal chunk "0\r\n\r\n")
+- [x] 10.3 Detect Content-Length body completion
+- [x] 10.4 Handle upstream read errors gracefully
+- [x] 10.5 Send partial response on timeout
+
 ## 9. Dump Mode Integration
 
 - [ ] 9.1 Create FlowWriter when --dump is specified
