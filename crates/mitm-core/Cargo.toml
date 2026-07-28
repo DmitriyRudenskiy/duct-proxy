@@ -8,3 +8,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 tokio = { workspace = true, features = ["sync"] }
+sha2 = { workspace = true }
+hex = { workspace = true }
+x509-parser = { workspace = true }
+pem = { workspace = true }

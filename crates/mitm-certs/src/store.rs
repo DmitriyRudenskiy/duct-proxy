@@ -3,7 +3,7 @@
 use crate::ca::CaRoot;
 use crate::leaf::LeafCert;
 use indexmap::IndexMap;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use thiserror::Error;
 
 /// Entry in the certificate store.
@@ -158,13 +158,6 @@ impl CertStore {
     /// Get the maximum number of entries.
     pub fn max_entries(&self) -> usize {
         self.max_entries
-    }
-
-    /// Evict the least recently used entry if the store is full.
-    fn evict_lru_if_needed(&mut self) {
-        if self.entries.len() >= self.max_entries {
-            self.entries.shift_remove_index(0);
-        }
     }
 }
 

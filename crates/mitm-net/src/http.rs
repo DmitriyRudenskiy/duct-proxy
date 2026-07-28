@@ -1000,8 +1000,8 @@ pub fn url_encode(s: &str) -> String {
             b' ' => out.push('+'),
             _ => {
                 out.push('%');
-                out.push(hex_char((byte >> 4) as u8));
-                out.push(hex_char((byte & 0x0F) as u8));
+                out.push(hex_char(byte >> 4));
+                out.push(hex_char(byte & 0x0F));
             }
         }
     }

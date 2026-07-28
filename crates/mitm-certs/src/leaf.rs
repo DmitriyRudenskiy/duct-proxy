@@ -65,7 +65,7 @@ impl LeafCert {
         
         // Parse CA certificate using x509-parser to extract issuer info
         let (_, ca_x509) = X509Certificate::from_der(ca.cert_der())
-            .map_err(|e| LeafError::Rcgen(rcgen::Error::CouldNotParseCertificate))?;
+            .map_err(|_| LeafError::Rcgen(rcgen::Error::CouldNotParseCertificate))?;
         
         // Create CA certificate parameters from parsed certificate
         let mut ca_cert_params = CertificateParams::new(vec![])?;
@@ -77,29 +77,29 @@ impl LeafCert {
         ];
         
         // Set issuer distinguished name from parsed certificate
-        if let Some(cn) = ca_x509.tbs_certificate.subject.iter_common_name().next() {
-            if let Ok(s) = cn.as_str() {
-                ca_cert_params.distinguished_name.push(
-                    DnType::CommonName,
-                    DnValue::Utf8String(s.to_string()),
-                );
-            }
+        if let Some(cn) = ca_x509.tbs_certificate.subject.iter_common_name().next()
+            && let Ok(s) = cn.as_str()
+        {
+            ca_cert_params.distinguished_name.push(
+                DnType::CommonName,
+                DnValue::Utf8String(s.to_string()),
+            );
         }
-        if let Some(o) = ca_x509.tbs_certificate.subject.iter_organization().next() {
-            if let Ok(s) = o.as_str() {
-                ca_cert_params.distinguished_name.push(
-                    DnType::OrganizationName,
-                    DnValue::Utf8String(s.to_string()),
-                );
-            }
+        if let Some(o) = ca_x509.tbs_certificate.subject.iter_organization().next()
+            && let Ok(s) = o.as_str()
+        {
+            ca_cert_params.distinguished_name.push(
+                DnType::OrganizationName,
+                DnValue::Utf8String(s.to_string()),
+            );
         }
-        if let Some(ou) = ca_x509.tbs_certificate.subject.iter_organizational_unit().next() {
-            if let Ok(s) = ou.as_str() {
-                ca_cert_params.distinguished_name.push(
-                    DnType::OrganizationalUnitName,
-                    DnValue::Utf8String(s.to_string()),
-                );
-            }
+        if let Some(ou) = ca_x509.tbs_certificate.subject.iter_organizational_unit().next()
+            && let Ok(s) = ou.as_str()
+        {
+            ca_cert_params.distinguished_name.push(
+                DnType::OrganizationalUnitName,
+                DnValue::Utf8String(s.to_string()),
+            );
         }
         
         // Generate a temporary certificate from CA params to use as issuer

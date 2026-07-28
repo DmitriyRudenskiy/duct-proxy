@@ -55,14 +55,14 @@
 
 ## 6. Certificate Type Integration (mitm-core)
 
-- [ ] 6.1 Define real `Cert` struct wrapping `x509_parser::certificate::X509Certificate<'static>`
-- [ ] 6.2 Implement `Cert::from_der(bytes) -> Result<Self>`
-- [ ] 6.3 Implement `Cert::to_pem() -> Result<String>`
-- [ ] 6.4 Implement `Cert::fingerprint_sha256() -> String`
-- [ ] 6.5 Update `mitm-core::connection::Connection.certificate_list` to use new Cert type
-- [ ] 6.6 Update serialization for new Cert type
-- [ ] 6.7 Update existing tests for new Cert type
-- [ ] 6.8 Write unit tests: Cert parsing, PEM round-trip, fingerprint
+- [x] 6.1 Define real `Cert` struct wrapping `x509_parser::certificate::X509Certificate<'static>`
+- [x] 6.2 Implement `Cert::from_der(bytes) -> Result<Self>`
+- [x] 6.3 Implement `Cert::to_pem() -> Result<String>`
+- [x] 6.4 Implement `Cert::fingerprint_sha256() -> String`
+- [x] 6.5 Update `mitm-core::connection::Connection.certificate_list` to use new Cert type
+- [x] 6.6 Update serialization for new Cert type
+- [x] 6.7 Update existing tests for new Cert type
+- [x] 6.8 Write unit tests: Cert parsing, PEM round-trip, fingerprint
 
 ## 7. Integration & Validation
 

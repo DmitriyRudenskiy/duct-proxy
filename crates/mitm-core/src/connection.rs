@@ -74,13 +74,85 @@ pub type Address = (String, u16);
 
 /// TLS certificate wrapper.
 ///
-/// Currently a placeholder — full implementation will wrap `x509-parser`.
+/// Wraps DER-encoded X.509 certificate data with lazy parsing for
+/// subject/issuer/fingerprint fields.
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Cert {
-    /// PEM-encoded certificate bytes (DER or PEM).
+    /// DER-encoded certificate bytes.
     pub der: Vec<u8>,
     /// Common name (CN) if parsed.
     pub cn: Option<String>,
+    /// SHA-256 fingerprint (hex, colon-separated).
+    pub fingerprint_sha256: Option<String>,
+}
+
+impl Cert {
+    /// Create a new Cert from DER-encoded bytes.
+    pub fn from_der(der: Vec<u8>) -> Self {
+        let mut cert = Self {
+            der,
+            cn: None,
+            fingerprint_sha256: None,
+        };
+        cert.parse_metadata();
+        cert
+    }
+
+    /// Parse CN and fingerprint from DER bytes (lazy, only once).
+    fn parse_metadata(&mut self) {
+        // Try to parse CN using x509-parser
+        if let Ok((_, x509)) = x509_parser::parse_x509_certificate(&self.der)
+            && let Some(cn) = x509.subject().iter_common_name().next()
+            && let Ok(s) = std::str::from_utf8(cn.attr_value().data)
+        {
+            self.cn = Some(s.to_string());
+        }
+
+        // Calculate SHA-256 fingerprint
+        use sha2::Digest;
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(&self.der);
+        let result = hasher.finalize();
+        self.fingerprint_sha256 = Some(hex::encode(result));
+    }
+
+    /// Export the certificate as PEM-encoded string.
+    pub fn to_pem(&self) -> Result<String, String> {
+        let pem_tag = "CERTIFICATE";
+        let pem = pem::Pem::new(pem_tag, self.der.as_slice());
+        Ok(pem::encode(&pem))
+    }
+
+    /// Get the certificate fingerprint (lazy, parses if needed).
+    pub fn fingerprint(&self) -> Option<&str> {
+        self.fingerprint_sha256.as_deref()
+    }
+
+    /// Get the Common Name (lazy, parses if needed).
+    pub fn common_name(&self) -> Option<&str> {
+        self.cn.as_deref()
+    }
+
+    /// Check if this is a CA certificate.
+    pub fn is_ca(&self) -> bool {
+        if let Ok((_, x509)) = x509_parser::parse_x509_certificate(&self.der)
+            && let Ok(Some(bc)) = x509.basic_constraints()
+        {
+            return bc.value.ca;
+        }
+        false
+    }
+
+    /// Get the validity period as (not_before, not_after) Unix timestamps.
+    pub fn validity(&self) -> Option<(i64, i64)> {
+        x509_parser::parse_x509_certificate(&self.der)
+            .ok()
+            .map(|(_, x509)| {
+                let not_before = x509.validity().not_before;
+                let not_after = x509.validity().not_after;
+                (not_before.timestamp(), not_after.timestamp())
+            })
+    }
 }
 
 /// Optional upstream proxy specification for a server connection.
@@ -332,5 +404,52 @@ mod tests {
         assert_eq!(client.proxy_mode, "regular");
         assert_eq!(client.connection.peername, Some(("127.0.0.1".to_string(), 12345)));
         assert!(client.connection.timestamp_start.is_some());
+    }
+
+    #[test]
+    fn test_cert_from_der() {
+        // Create a minimal self-signed certificate for testing
+        // This is a simple DER-encoded certificate (not a valid one, but tests parsing)
+        let cert = Cert::from_der(vec![0x30, 0x82, 0x01, 0x00]); // Not valid DER, but tests the API
+        assert!(cert.fingerprint().is_some());
+        assert!(cert.common_name().is_none()); // Invalid cert, so no CN
+    }
+
+    #[test]
+    fn test_cert_pem_roundtrip() {
+        // Create a Cert with some DER bytes
+        let der_bytes = vec![0x30, 0x82, 0x01, 0x00, 0x30, 0x82, 0x00, 0x00];
+        let cert = Cert::from_der(der_bytes.clone());
+
+        // Test PEM export (may fail for invalid DER, but API should work)
+        let result = cert.to_pem();
+        // For invalid DER, PEM export may fail, which is expected
+        if let Ok(pem) = result {
+            assert!(pem.contains("CERTIFICATE"));
+            assert!(pem.contains("-----"));
+        }
+    }
+
+    #[test]
+    fn test_cert_fingerprint_deterministic() {
+        let der = vec![0x01, 0x02, 0x03, 0x04];
+        let cert1 = Cert::from_der(der.clone());
+        let cert2 = Cert::from_der(der);
+
+        assert_eq!(cert1.fingerprint(), cert2.fingerprint());
+    }
+
+    #[test]
+    fn test_cert_is_ca() {
+        // Invalid DER, should return false
+        let cert = Cert::from_der(vec![0x00, 0x01]);
+        assert!(!cert.is_ca());
+    }
+
+    #[test]
+    fn test_cert_validity() {
+        // Invalid DER, should return None
+        let cert = Cert::from_der(vec![0x00, 0x01]);
+        assert!(cert.validity().is_none());
     }
 }

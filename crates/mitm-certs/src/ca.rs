@@ -1,6 +1,6 @@
 //! CA certificate generation using rcgen with ECDSA P-256.
 
-use rcgen::{CertificateParams, DnType, DnValue, KeyPair};
+use rcgen::{CertificateParams, KeyPair};
 use std::path::Path;
 use thiserror::Error;
 
@@ -73,7 +73,6 @@ impl CaRoot {
         // Generate self-signed certificate
         let cert = params.self_signed(&key_pair)?;
         let key_der = key_pair.serialize_der();
-        let key_pem = key_pair.serialize_pem();
         let cert_pem = cert.pem();
 
         Ok(Self {
@@ -179,7 +178,7 @@ impl CaRoot {
             cert_der: cert_pem_obj.contents().to_vec(),
             key_pkcs8: key_pem_obj.contents().to_vec(),
             cn: String::new(), // CN will be extracted when needed
-            cert_pem: cert_pem,
+            cert_pem,
         })
     }
 }
