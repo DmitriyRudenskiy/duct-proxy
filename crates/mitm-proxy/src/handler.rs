@@ -246,9 +246,9 @@ impl HttpForwarder {
         if total.is_empty() {
             let resp = b"HTTP/1.1 502 Bad Gateway\r\nContent-Length: 15\r\nConnection: close\r\n\r\n502 Bad Gateway";
             client_stream.write_all(resp).await
-                .map_err(|e| crate::error::ProxyError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+                .map_err(|e| crate::error::ProxyError::Io(std::io::Error::other(e.to_string())))?;
             client_stream.flush().await
-                .map_err(|e| crate::error::ProxyError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+                .map_err(|e| crate::error::ProxyError::Io(std::io::Error::other(e.to_string())))?;
             
             tracing::warn!("No response received from upstream {}", addr);
             return Ok(());
@@ -256,9 +256,9 @@ impl HttpForwarder {
         
         // 7. Write response to client
         client_stream.write_all(&total).await
-            .map_err(|e| crate::error::ProxyError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| crate::error::ProxyError::Io(std::io::Error::other(e.to_string())))?;
         client_stream.flush().await
-            .map_err(|e| crate::error::ProxyError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+            .map_err(|e| crate::error::ProxyError::Io(std::io::Error::other(e.to_string())))?;
         
         // 8. Handle keep-alive: close connection if "Connection: close" header present
         let has_connection_close = total.windows(17)
@@ -266,7 +266,7 @@ impl HttpForwarder {
         let has_keep_alive = total.windows(20)
             .any(|w| w.eq_ignore_ascii_case(b"connection: keep-alive\r\n"));
         
-        if has_connection_close || (!has_keep_alive && !has_connection_close) {
+        if has_connection_close || !has_keep_alive {
             // HTTP/1.1 default is keep-alive, but if server said close, close it
             if has_connection_close {
                 tracing::debug!("Connection: close from upstream, closing client connection");
@@ -288,11 +288,11 @@ impl HttpForwarder {
             .unwrap_or(0);
         
         tracing::info!(
-            method = %parts.get(0).unwrap_or(&"UNKNOWN"),
+            method = %parts.first().unwrap_or(&"UNKNOWN"),
             url = url,
             status = status,
             "{} {} → {}",
-            parts.get(0).unwrap_or(&"UNKNOWN"),
+            parts.first().unwrap_or(&"UNKNOWN"),
             url,
             status
         );

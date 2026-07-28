@@ -162,7 +162,7 @@ async fn handle_connection(
     // 1. Peek first bytes to detect protocol
     let mut peek_buf = [0u8; 8192];
     let n = stream.peek(&mut peek_buf).await
-        .map_err(|e| ProxyError::Io(e.into()))?;
+        .map_err(ProxyError::Io)?;
     if n == 0 { return Ok(()); }
     
     info!("Read {} bytes from {}", n, peer_addr);
@@ -177,7 +177,7 @@ async fn handle_connection(
             // 1. Read the full CONNECT request
             let mut buf = [0u8; 8192];
             let n = stream.read(&mut buf).await
-                .map_err(|e| ProxyError::Io(e.into()))?;
+                .map_err(ProxyError::Io)?;
             let request = String::from_utf8_lossy(&buf[..n]);
             
             // 2. Parse target host:port
@@ -188,9 +188,9 @@ async fn handle_connection(
             
             // 3. Respond 200 Connection Established
             stream.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n").await
-                .map_err(|e| ProxyError::Io(e.into()))?;
+                .map_err(ProxyError::Io)?;
             stream.flush().await
-                .map_err(|e| ProxyError::Io(e.into()))?;
+                .map_err(ProxyError::Io)?;
             
             // 4. TLS interception (MITM)
             let mut store = cert_store.lock().await;
@@ -210,7 +210,7 @@ async fn handle_connection(
             // Plain HTTP: GET http://example.com/ HTTP/1.1
             let mut buf = [0u8; 65536];
             let n = stream.read(&mut buf).await
-                .map_err(|e| ProxyError::Io(e.into()))?;
+                .map_err(ProxyError::Io)?;
             
             let forwarder = HttpForwarder;
             forwarder.forward(&mut stream, &buf[..n]).await?;
