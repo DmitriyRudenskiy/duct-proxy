@@ -2,6 +2,11 @@
 name = "mitm-net"
 version = "0.1.0"
 edition = "2024"
+description = "HTTP parsing, URL, cookies, chunked encoding, HTTP/2 support"
+license = "MIT"
+repository = "https://github.com/mitmproxy-rs/mitmproxy-rs"
+keywords = ["proxy", "mitm", "http", "parser"]
+categories = ["network-programming"]
 
 [dependencies]
 mitm-core = { path = "../mitm-core" }

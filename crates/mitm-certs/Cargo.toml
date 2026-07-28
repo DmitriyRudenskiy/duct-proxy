@@ -2,6 +2,11 @@
 name = "mitm-certs"
 version = "0.1.0"
 edition = "2024"
+description = "CA certificate management, CertStore, leaf certificate generation"
+license = "MIT"
+repository = "https://github.com/mitmproxy-rs/mitmproxy-rs"
+keywords = ["proxy", "mitm", "tls", "certificate"]
+categories = ["cryptography"]
 
 [dependencies]
 rcgen = { workspace = true }

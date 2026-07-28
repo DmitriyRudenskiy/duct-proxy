@@ -2,6 +2,11 @@
 name = "mitm-addons"
 version = "0.1.0"
 edition = "2024"
+description = "Addon system for MITM proxy: ModifyHeaders, ModifyBody, Block"
+license = "MIT"
+repository = "https://github.com/mitmproxy-rs/mitmproxy-rs"
+keywords = ["proxy", "mitm", "addon", "plugin"]
+categories = ["network-programming"]
 
 [dependencies]
 mitm-core = { path = "../mitm-core" }

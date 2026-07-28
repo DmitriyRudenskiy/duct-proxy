@@ -1,1 +1,9 @@
 /target
+*.swp
+*.swo
+.idea/
+.vscode/
+*.pem
+!tests/fixtures/*.pem
+coverage/
+*.jsonl.gz

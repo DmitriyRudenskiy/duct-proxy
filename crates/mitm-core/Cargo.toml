@@ -2,6 +2,11 @@
 name = "mitm-core"
 version = "0.1.0"
 edition = "2024"
+description = "Core data models: Flow, Connection, Headers for MITM proxy"
+license = "MIT"
+repository = "https://github.com/mitmproxy-rs/mitmproxy-rs"
+keywords = ["proxy", "mitm", "http"]
+categories = ["network-programming"]
 
 [dependencies]
 serde = { workspace = true }

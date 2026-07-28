@@ -2,6 +2,11 @@
 name = "mitm-cli"
 version = "0.1.0"
 edition = "2024"
+description = "MITM proxy CLI binary"
+license = "MIT"
+repository = "https://github.com/mitmproxy-rs/mitmproxy-rs"
+keywords = ["proxy", "mitm", "cli"]
+categories = ["command-line-interface"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

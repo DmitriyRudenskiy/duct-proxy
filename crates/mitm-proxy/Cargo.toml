@@ -2,6 +2,11 @@
 name = "mitm-proxy"
 version = "0.1.0"
 edition = "2024"
+description = "Proxy server, TLS interception, HTTP/HTTPS forwarding"
+license = "MIT"
+repository = "https://github.com/mitmproxy-rs/mitmproxy-rs"
+keywords = ["proxy", "mitm", "tls", "http"]
+categories = ["network-programming"]
 
 [dependencies]
 tokio-rustls = "0.26"
