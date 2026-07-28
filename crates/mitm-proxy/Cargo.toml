@@ -12,6 +12,7 @@ tokio = { version = "1", features = ["full"] }
 mitm-core = { path = "../mitm-core" }
 mitm-net = { path = "../mitm-net" }
 mitm-certs = { path = "../mitm-certs" }
+mitm-addons = { path = "../mitm-addons" }
 thiserror = "2"
 tracing = "0.1"
 serde = { workspace = true }

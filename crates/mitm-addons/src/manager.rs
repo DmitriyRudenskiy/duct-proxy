@@ -1,8 +1,8 @@
 //! AddonManager for registration and sequential dispatch.
 
 use crate::addon::{Addon, AddonError};
-use mitm_proxy::Flow;
-use tracing::{debug, error, info, warn};
+use mitm_core::FlowBase;
+use tracing::{debug, error, info};
 
 /// Error policy for addon dispatch.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -52,7 +52,7 @@ impl AddonManager {
     }
 
     /// Dispatch requestheaders hook to all addons.
-    pub async fn dispatch_requestheaders(&mut self, flow: &mut Flow) -> Result<(), AddonError> {
+    pub async fn dispatch_requestheaders(&mut self, flow: &mut FlowBase) -> Result<(), AddonError> {
         debug!("Dispatching requestheaders to {} addons", self.addons.len());
         for (i, addon) in self.addons.iter_mut().enumerate() {
             match addon.requestheaders(flow).await {
@@ -72,7 +72,7 @@ impl AddonManager {
     }
 
     /// Dispatch request hook to all addons.
-    pub async fn dispatch_request(&mut self, flow: &mut Flow) -> Result<(), AddonError> {
+    pub async fn dispatch_request(&mut self, flow: &mut FlowBase) -> Result<(), AddonError> {
         debug!("Dispatching request to {} addons", self.addons.len());
         for (i, addon) in self.addons.iter_mut().enumerate() {
             match addon.request(flow).await {
@@ -92,7 +92,7 @@ impl AddonManager {
     }
 
     /// Dispatch responseheaders hook to all addons.
-    pub async fn dispatch_responseheaders(&mut self, flow: &mut Flow) -> Result<(), AddonError> {
+    pub async fn dispatch_responseheaders(&mut self, flow: &mut FlowBase) -> Result<(), AddonError> {
         debug!("Dispatching responseheaders to {} addons", self.addons.len());
         for (i, addon) in self.addons.iter_mut().enumerate() {
             match addon.responseheaders(flow).await {
@@ -112,7 +112,7 @@ impl AddonManager {
     }
 
     /// Dispatch response hook to all addons.
-    pub async fn dispatch_response(&mut self, flow: &mut Flow) -> Result<(), AddonError> {
+    pub async fn dispatch_response(&mut self, flow: &mut FlowBase) -> Result<(), AddonError> {
         debug!("Dispatching response to {} addons", self.addons.len());
         for (i, addon) in self.addons.iter_mut().enumerate() {
             match addon.response(flow).await {
@@ -165,5 +165,148 @@ impl AddonManager {
 impl Default for AddonManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{Addon, AddonError, ModifyHeaders};
+    use mitm_core::FlowBase;
+
+    /// Test addon that tracks hook calls.
+    struct CallTracker {
+        called: std::sync::Arc<std::sync::atomic::AtomicBool>,
+    }
+
+    #[async_trait::async_trait]
+    impl Addon for CallTracker {
+        async fn requestheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
+            self.called.store(true, std::sync::atomic::Ordering::SeqCst);
+            Ok(())
+        }
+
+        async fn request(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
+            self.called.store(true, std::sync::atomic::Ordering::SeqCst);
+            Ok(())
+        }
+
+        async fn responseheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
+            self.called.store(true, std::sync::atomic::Ordering::SeqCst);
+            Ok(())
+        }
+
+        async fn response(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
+            self.called.store(true, std::sync::atomic::Ordering::SeqCst);
+            Ok(())
+        }
+    }
+
+    fn test_flow() -> FlowBase {
+        FlowBase::new(
+            mitm_core::connection::Client::new(
+                ("127.0.0.1".to_string(), 12345),
+                ("127.0.0.1".to_string(), 80),
+                "regular",
+            ),
+            mitm_core::connection::Server::new(),
+            true,
+        )
+    }
+
+    #[tokio::test]
+    async fn test_addon_manager_creation() {
+        let mgr = AddonManager::new();
+        assert!(mgr.is_empty());
+        assert_eq!(mgr.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_addon_manager_register() {
+        let mut mgr = AddonManager::new();
+        let addon = ModifyHeaders::new().add("X-Test", "value");
+        mgr.register(Box::new(addon));
+        assert_eq!(mgr.len(), 1);
+        assert!(!mgr.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_addon_manager_dispatch_requestheaders() {
+        let mut mgr = AddonManager::new();
+        let called = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let called_clone = called.clone();
+
+        mgr.register(Box::new(CallTracker {
+            called: called_clone,
+        }));
+
+        let mut flow = test_flow();
+        mgr.dispatch_requestheaders(&mut flow).await.unwrap();
+        assert!(called.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_addon_manager_dispatch_request() {
+        let mut mgr = AddonManager::new();
+        let called = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let called_clone = called.clone();
+
+        mgr.register(Box::new(CallTracker {
+            called: called_clone,
+        }));
+
+        let mut flow = test_flow();
+        mgr.dispatch_request(&mut flow).await.unwrap();
+        assert!(called.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_addon_manager_dispatch_responseheaders() {
+        let mut mgr = AddonManager::new();
+        let called = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let called_clone = called.clone();
+
+        mgr.register(Box::new(CallTracker {
+            called: called_clone,
+        }));
+
+        let mut flow = test_flow();
+        mgr.dispatch_responseheaders(&mut flow).await.unwrap();
+        assert!(called.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_addon_manager_dispatch_response() {
+        let mut mgr = AddonManager::new();
+        let called = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let called_clone = called.clone();
+
+        mgr.register(Box::new(CallTracker {
+            called: called_clone,
+        }));
+
+        let mut flow = test_flow();
+        mgr.dispatch_response(&mut flow).await.unwrap();
+        assert!(called.load(std::sync::atomic::Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn test_addon_manager_error_isolation() {
+        let mut mgr = AddonManager::new();
+
+        struct FailingAddon;
+
+        #[async_trait::async_trait]
+        impl Addon for FailingAddon {
+            async fn requestheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
+                Err(AddonError::Execution("test error".to_string()))
+            }
+        }
+
+        mgr.register(Box::new(FailingAddon));
+
+        let mut flow = test_flow();
+        let result = mgr.dispatch_requestheaders(&mut flow).await;
+        assert!(result.is_err());
     }
 }

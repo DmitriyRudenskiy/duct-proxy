@@ -5,7 +5,6 @@ edition = "2024"
 
 [dependencies]
 mitm-core = { path = "../mitm-core" }
-mitm-proxy = { path = "../mitm-proxy" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = "2"

@@ -1,7 +1,7 @@
 //! ModifyHeaders addon for modifying HTTP headers.
 
 use crate::addon::{Addon, AddonError};
-use mitm_proxy::Flow;
+use mitm_core::FlowBase;
 use regex::Regex;
 use std::collections::HashMap;
 
@@ -183,12 +183,12 @@ impl Default for ModifyHeaders {
 
 #[async_trait::async_trait]
 impl Addon for ModifyHeaders {
-    async fn requestheaders(&mut self, _flow: &mut Flow) -> Result<(), AddonError> {
+    async fn requestheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
         // TODO: Modify request headers from flow
         Ok(())
     }
 
-    async fn responseheaders(&mut self, _flow: &mut Flow) -> Result<(), AddonError> {
+    async fn responseheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
         // TODO: Modify response headers from flow
         Ok(())
     }

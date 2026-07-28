@@ -1,7 +1,7 @@
 //! Filter addon for filtering flows based on expressions.
 
 use crate::addon::{Addon, AddonError};
-use mitm_proxy::Flow;
+use mitm_core::FlowBase;
 
 /// Addon to filter flows based on URL, method, or header criteria.
 pub struct Filter {
@@ -42,7 +42,7 @@ impl Filter {
     }
 
     /// Check if a flow matches this filter.
-    pub fn matches(&self, _flow: &Flow) -> bool {
+    pub fn matches(&self, _flow: &FlowBase) -> bool {
         // TODO: Implement filter matching logic
         true
     }
@@ -56,7 +56,7 @@ impl Default for Filter {
 
 #[async_trait::async_trait]
 impl Addon for Filter {
-    async fn requestheaders(&mut self, _flow: &mut Flow) -> Result<(), AddonError> {
+    async fn requestheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
         // TODO: Check if flow matches filter
         Ok(())
     }

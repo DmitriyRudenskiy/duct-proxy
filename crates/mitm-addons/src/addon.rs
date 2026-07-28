@@ -1,6 +1,6 @@
 //! Addon trait definition with lifecycle hooks.
 
-use mitm_proxy::Flow;
+use mitm_core::FlowBase;
 use thiserror::Error;
 
 /// Errors that can occur during addon execution.
@@ -23,22 +23,22 @@ pub enum AddonError {
 #[async_trait::async_trait]
 pub trait Addon: Send + Sync {
     /// Called before request headers are sent to upstream.
-    async fn requestheaders(&mut self, _flow: &mut Flow) -> Result<(), AddonError> {
+    async fn requestheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
         Ok(())
     }
 
     /// Called after request body is complete.
-    async fn request(&mut self, _flow: &mut Flow) -> Result<(), AddonError> {
+    async fn request(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
         Ok(())
     }
 
     /// Called before response headers are sent to client.
-    async fn responseheaders(&mut self, _flow: &mut Flow) -> Result<(), AddonError> {
+    async fn responseheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
         Ok(())
     }
 
     /// Called after response body is complete.
-    async fn response(&mut self, _flow: &mut Flow) -> Result<(), AddonError> {
+    async fn response(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
         Ok(())
     }
 
@@ -48,22 +48,22 @@ pub trait Addon: Send + Sync {
     }
 
     /// Called for each TCP message in a TCP flow.
-    async fn tcp_message(&mut self, _flow: &mut Flow, _message: &mitm_proxy::TCPMessage) -> Result<(), AddonError> {
+    async fn tcp_message(&mut self, _flow: &mut FlowBase, _message: &[u8]) -> Result<(), AddonError> {
         Ok(())
     }
 
     /// Called for each UDP message in a UDP flow.
-    async fn udp_message(&mut self, _flow: &mut Flow, _message: &mitm_proxy::UDPMessage) -> Result<(), AddonError> {
+    async fn udp_message(&mut self, _flow: &mut FlowBase, _message: &[u8]) -> Result<(), AddonError> {
         Ok(())
     }
 
     /// Called for DNS query messages.
-    async fn dns_request(&mut self, _flow: &mut Flow, _message: &mitm_proxy::DNSMessage) -> Result<(), AddonError> {
+    async fn dns_request(&mut self, _flow: &mut FlowBase, _message: &[u8]) -> Result<(), AddonError> {
         Ok(())
     }
 
     /// Called for DNS response messages.
-    async fn dns_response(&mut self, _flow: &mut Flow, _message: &mitm_proxy::DNSMessage) -> Result<(), AddonError> {
+    async fn dns_response(&mut self, _flow: &mut FlowBase, _message: &[u8]) -> Result<(), AddonError> {
         Ok(())
     }
 }

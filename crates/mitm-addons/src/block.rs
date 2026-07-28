@@ -1,7 +1,7 @@
 //! Block addon for blocking requests matching filters.
 
 use crate::addon::{Addon, AddonError};
-use mitm_proxy::Flow;
+use mitm_core::FlowBase;
 use regex::Regex;
 
 /// Filter criteria for blocking requests.
@@ -180,7 +180,7 @@ impl Default for Block {
 
 #[async_trait::async_trait]
 impl Addon for Block {
-    async fn requestheaders(&mut self, _flow: &mut Flow) -> Result<(), AddonError> {
+    async fn requestheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
         // TODO: Check if flow matches any filter and send 403 if matched
         Ok(())
     }

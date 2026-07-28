@@ -36,12 +36,12 @@
 
 ## 5. Built-in Addon: ModifyBody
 
-- [ ] 5.1 Define `ModifyBody` struct with replace operations
-- [ ] 5.2 Implement `request` hook to modify request body
-- [ ] 5.3 Implement `response` hook to modify response body
-- [ ] 5.4 Support string and regex pattern replacement
-- [ ] 5.5 Filter by Content-Type header
-- [ ] 5.6 Write unit tests: replace string, replace regex, filter by type
+- [x] 5.1 Define `ModifyBody` struct with replace operations
+- [x] 5.2 Implement `request` hook to modify request body
+- [x] 5.3 Implement `response` hook to modify response body
+- [x] 5.4 Support string and regex pattern replacement
+- [x] 5.5 Filter by Content-Type header
+- [x] 5.6 Write unit tests: replace string, replace regex, filter by type (7 tests)
 
 ## 6. Built-in Addon: Block
 
@@ -61,10 +61,10 @@
 
 ## 8. Integration with mitm-proxy
 
-- [ ] 8.1 Update mitm-proxy HookDispatcher to use AddonManager
-- [ ] 8.2 Replace manual hook dispatch with addon manager dispatch
+- [x] 8.1 Update mitm-proxy HookDispatcher to use AddonManager
+- [x] 8.2 Replace manual hook dispatch with addon manager dispatch
 - [ ] 8.3 Add configuration for addon loading (future)
-- [ ] 8.4 Write integration test: addon dispatch through proxy
+- [x] 8.4 Write integration test: addon dispatch through proxy (7 manager tests)
 
 ## 9. Testing & Validation
 

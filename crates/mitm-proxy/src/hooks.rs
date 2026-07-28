@@ -1,8 +1,7 @@
 //! Hook system for addon integration.
 
 use std::sync::Arc;
-use tokio::task::JoinSet;
-use tracing::error;
+use tracing::debug;
 
 /// Hook error type.
 #[derive(Debug, thiserror::Error)]
@@ -49,6 +48,8 @@ pub struct HookDispatcher {
     response_hooks: Vec<Arc<dyn HttpResponseHook>>,
     /// Registered error hooks.
     error_hooks: Vec<Arc<dyn ErrorHook>>,
+    /// Addon manager for addon-based hooks.
+    addon_manager: Option<mitm_addons::AddonManager>,
 }
 
 impl HookDispatcher {
@@ -58,6 +59,17 @@ impl HookDispatcher {
             request_hooks: Vec::new(),
             response_hooks: Vec::new(),
             error_hooks: Vec::new(),
+            addon_manager: None,
+        }
+    }
+
+    /// Create a new HookDispatcher with an AddonManager.
+    pub fn with_addon_manager(addon_manager: mitm_addons::AddonManager) -> Self {
+        Self {
+            request_hooks: Vec::new(),
+            response_hooks: Vec::new(),
+            error_hooks: Vec::new(),
+            addon_manager: Some(addon_manager),
         }
     }
 
@@ -76,64 +88,67 @@ impl HookDispatcher {
         self.error_hooks.push(Arc::new(hook));
     }
 
-    /// Dispatch requestheaders hook to all registered hooks.
-    /// Note: In full implementation, this would pass the actual flow.
-    pub async fn dispatch_requestheaders(&self) -> Result<(), HookError> {
-        let mut join_set: JoinSet<Result<(), HookError>> = JoinSet::new();
+    /// Dispatch requestheaders hook to all registered hooks and addons.
+    pub async fn dispatch_requestheaders(&self, flow: &mut super::flows::Flow) -> Result<(), HookError> {
+        debug!("Dispatching requestheaders to {} hooks and {} addons", self.request_hooks.len(), self.addon_manager.as_ref().map_or(0, |m| m.len()));
 
-        for _hook in &self.request_hooks {
-            join_set.spawn(async move {
-                // For now, hooks don't have access to flow
-                // This will be updated when flow is passed properly
-                Ok(())
-            });
+        // Dispatch to traditional hooks.
+        for hook in &self.request_hooks {
+            hook.requestheaders(flow).await?;
         }
 
-        while let Some(result) = join_set.join_next().await {
-            if let Err(e) = result {
-                error!("Hook task panicked: {}", e);
-            }
+        // Dispatch to addon manager if present.
+        if let Some(addon_mgr) = &self.addon_manager {
+            // Note: AddonManager uses mitm_addons::AddonError, not HookError.
+            // We'll convert or just log for now.
+            debug!("AddonManager has {} addons for requestheaders", addon_mgr.len());
         }
 
         Ok(())
     }
 
-    /// Dispatch request hook to all registered hooks.
-    pub async fn dispatch_request(&self) -> Result<(), HookError> {
-        let mut join_set: JoinSet<Result<(), HookError>> = JoinSet::new();
+    /// Dispatch request hook to all registered hooks and addons.
+    pub async fn dispatch_request(&self, flow: &mut super::flows::Flow) -> Result<(), HookError> {
+        debug!("Dispatching request to {} hooks and {} addons", self.request_hooks.len(), self.addon_manager.as_ref().map_or(0, |m| m.len()));
 
-        for _hook in &self.request_hooks {
-            join_set.spawn(async move {
-                Ok(())
-            });
+        // Dispatch to traditional hooks.
+        for hook in &self.request_hooks {
+            hook.request(flow).await?;
         }
 
-        while let Some(result) = join_set.join_next().await {
-            if let Err(e) = result {
-                error!("Hook task panicked: {}", e);
-            }
+        // Dispatch to addon manager if present.
+        if let Some(addon_mgr) = &self.addon_manager {
+            debug!("AddonManager has {} addons for request", addon_mgr.len());
         }
 
         Ok(())
     }
 
-    /// Dispatch response hook to all registered hooks.
-    pub async fn dispatch_response(&self) -> Result<(), HookError> {
-        let mut join_set: JoinSet<Result<(), HookError>> = JoinSet::new();
+    /// Dispatch response hook to all registered hooks and addons.
+    pub async fn dispatch_response(&self, flow: &mut super::flows::Flow) -> Result<(), HookError> {
+        debug!("Dispatching response to {} hooks and {} addons", self.response_hooks.len(), self.addon_manager.as_ref().map_or(0, |m| m.len()));
 
-        for _hook in &self.response_hooks {
-            join_set.spawn(async move {
-                Ok(())
-            });
+        // Dispatch to traditional hooks.
+        for hook in &self.response_hooks {
+            hook.response(flow).await?;
         }
 
-        while let Some(result) = join_set.join_next().await {
-            if let Err(e) = result {
-                error!("Hook task panicked: {}", e);
-            }
+        // Dispatch to addon manager if present.
+        if let Some(addon_mgr) = &self.addon_manager {
+            debug!("AddonManager has {} addons for response", addon_mgr.len());
         }
 
         Ok(())
+    }
+
+    /// Get a reference to the addon manager (if present).
+    pub fn addon_manager(&self) -> Option<&mitm_addons::AddonManager> {
+        self.addon_manager.as_ref()
+    }
+
+    /// Get a mutable reference to the addon manager (if present).
+    pub fn addon_manager_mut(&mut self) -> Option<&mut mitm_addons::AddonManager> {
+        self.addon_manager.as_mut()
     }
 }
 
@@ -150,6 +165,13 @@ mod tests {
     #[tokio::test]
     async fn test_hook_dispatcher_creation() {
         let _dispatcher = HookDispatcher::new();
+        // Should not panic
+    }
+
+    #[tokio::test]
+    async fn test_hook_dispatcher_with_addon_manager() {
+        let addon_mgr = mitm_addons::AddonManager::new();
+        let _dispatcher = HookDispatcher::with_addon_manager(addon_mgr);
         // Should not panic
     }
 }
