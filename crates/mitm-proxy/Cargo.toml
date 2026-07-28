@@ -1,0 +1,10 @@
+[package]
+name = "mitm-proxy"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+mitm-core = { path = "../mitm-core" }
+mitm-net = { path = "../mitm-net" }
+serde = { workspace = true }
+serde_json = { workspace = true }

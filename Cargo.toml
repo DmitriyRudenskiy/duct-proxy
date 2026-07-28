@@ -1,0 +1,24 @@
+[workspace]
+members = [
+    "crates/mitm-core",       # ядро: flow, connection, hooks
+    "crates/mitm-net",        # сетевой слой: TLS, HTTP parsing
+    "crates/mitm-proxy",      # прокси-логика: MITM, layers
+    "crates/mitm-certs",      # CA, генерация сертификатов
+    "crates/mitm-addons",     # система аддонов
+    "crates/mitm-io",         # сериализация flows
+    "crates/mitm-cli",        # бинарники: mitmproxy, mitmdump
+    "crates/mitm-web",        # веб-интерфейс (опционально)
+]
+resolver = "2"
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+rustls = "0.23"
+rcgen = "0.13"
+h2 = "0.4"
+http = "1"
+bytes = "1"
+tracing = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
