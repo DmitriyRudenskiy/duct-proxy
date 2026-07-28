@@ -143,7 +143,7 @@ impl ModifyHeaders {
                         }
                     }
                 }
-                HeaderAction::Remove { name } => {
+                HeaderAction::Remove { name: _ } => {
                     // Remove all matching headers.
                     for name in &matched_names {
                         headers.remove(name);

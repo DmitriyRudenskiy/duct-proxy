@@ -6,18 +6,15 @@ use tracing::{debug, error, info};
 
 /// Error policy for addon dispatch.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Default)]
 pub enum ErrorPolicy {
     /// Stop dispatch on first error.
+    #[default]
     StopOnFirst,
     /// Continue dispatch on error, log and collect errors.
     ContinueOnError,
 }
 
-impl Default for ErrorPolicy {
-    fn default() -> Self {
-        Self::StopOnFirst
-    }
-}
 
 /// Manager for addon registration and dispatch.
 pub struct AddonManager {

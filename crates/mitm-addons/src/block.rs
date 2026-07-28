@@ -146,11 +146,10 @@ impl Block {
                     }
                 }
                 BlockFilter::Method { method: method_pattern } => {
-                    if let Some(method) = method {
-                        if method == method_pattern {
+                    if let Some(method) = method
+                        && method == method_pattern {
                             return true;
                         }
-                    }
                 }
                 BlockFilter::Header { name, value } => {
                     for (header_name, header_value) in headers {
