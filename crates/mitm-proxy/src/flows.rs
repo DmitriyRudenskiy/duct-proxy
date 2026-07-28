@@ -19,6 +19,10 @@ pub struct HTTPFlow {
     pub websocket: Option<super::websocket::WebSocketData>,
 }
 
+// Manually implement Send + Sync for HTTPFlow (all fields are Send + Sync)
+unsafe impl Send for HTTPFlow {}
+unsafe impl Sync for HTTPFlow {}
+
 /// TCP flow: ordered list of stream messages.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TCPFlow {

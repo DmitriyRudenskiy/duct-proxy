@@ -1,14 +1,18 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! mitm-io: I/O utilities for mitmproxy-rs.
+//!
+//! This crate provides:
+//! - **FlowSerializer**: Serialize/deserialize HTTPFlow to/from JSON
+//! - **FlowWriter**: Append flows to gzip-compressed JSONL files (.jsonl.gz)
+//! - **FlowReader**: Read flows from gzip-compressed JSONL files
+//! - **HarExporter**: Export flows to HAR 1.2 format (optional)
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod serializer;
+pub mod writer;
+pub mod reader;
+pub mod har;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+// Re-exports.
+pub use serializer::{FlowSerializer, JsonFlowSerializer};
+pub use writer::FlowWriter;
+pub use reader::FlowReader;
+pub use har::HarExporter;
