@@ -4,3 +4,17 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+clap = { version = "4", features = ["derive"] }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tokio = { workspace = true, features = ["full"] }
+mitm-core = { path = "../mitm-core" }
+mitm-net = { path = "../mitm-net" }
+mitm-proxy = { path = "../mitm-proxy" }
+mitm-certs = { path = "../mitm-certs" }
+mitm-addons = { path = "../mitm-addons" }
+mitm-options = { path = "../mitm-options" }
+mitm-io = { path = "../mitm-io" }
+thiserror = "2"
+serde_json = { workspace = true }
+dirs = "6"
