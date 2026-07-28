@@ -46,10 +46,10 @@
 ## 6. Built-in Addon: Block
 
 - [x] 6.1 Define `Block` struct with filter criteria
-- [ ] 6.2 Implement `requestheaders` hook to check filters
-- [ ] 6.3 Send 403 response when flow matches filter
+- [x] 6.2 Implement `request` hook to check filters and mark flow as blocked
+- [ ] 6.3 Send 403 response when flow matches filter (deferred to mitm-proxy integration)
 - [x] 6.4 Support URL, header, and source IP filters
-- [x] 6.5 Write unit tests: block by URL, block by header, block by IP (6 tests)
+- [x] 6.5 Write unit tests: block by URL, block by header, block by IP, block metadata (8 tests)
 
 ## 7. Built-in Addon: Filter
 

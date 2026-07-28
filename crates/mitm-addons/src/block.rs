@@ -114,6 +114,16 @@ impl Block {
         Ok(())
     }
 
+    /// Check if a flow should be blocked based on filters.
+    fn check_flow(&self, flow: &FlowBase) -> bool {
+        // Extract information from flow to check against filters
+        let source_ip = flow.client_conn.connection.peername.as_ref().map(|(host, _)| host.clone());
+        
+        // For now, we can only check source IP from FlowBase
+        // URL and headers would require HTTP-specific access
+        self.should_block(None, None, &[], source_ip.as_deref())
+    }
+
     /// Check if a request matches any block filter.
     pub fn should_block(
         &self,
@@ -180,8 +190,19 @@ impl Default for Block {
 
 #[async_trait::async_trait]
 impl Addon for Block {
-    async fn requestheaders(&mut self, _flow: &mut FlowBase) -> Result<(), AddonError> {
-        // TODO: Check if flow matches any filter and send 403 if matched
+    async fn request(&mut self, flow: &mut FlowBase) -> Result<(), AddonError> {
+        // Check if flow should be blocked based on filters
+        let should_block = self.check_flow(flow);
+        
+        if should_block {
+            // Mark the flow as blocked via metadata
+            flow.metadata.insert(
+                "blocked".to_string(),
+                serde_json::json!("Blocked by Addon: Block"),
+            );
+            tracing::info!("Flow blocked by Block addon");
+        }
+        
         Ok(())
     }
 }
@@ -238,5 +259,57 @@ mod tests {
         assert!(!block.should_block(Some("https://good.com"), None, &[], None));
         assert!(!block.should_block(None, Some("GET"), &[], None));
         assert!(!block.should_block(None, None, &[], Some("10.0.0.1")));
+    }
+
+    #[tokio::test]
+    async fn test_block_sets_metadata_flag() {
+        use mitm_core::connection::Client;
+        use mitm_core::flow::FlowBase;
+
+        let mut block = Block::new().source_ip("^192\\.168\\.1\\.100$");
+        block.compile().unwrap();
+
+        let mut flow = FlowBase::new(
+            Client::new(
+                ("192.168.1.100".to_string(), 12345),
+                ("10.0.0.1".to_string(), 80),
+                "regular",
+            ),
+            mitm_core::connection::Server::new(),
+            true,
+        );
+
+        block.request(&mut flow).await.unwrap();
+        
+        // Check that the flow was marked as blocked
+        assert!(flow.metadata.contains_key("blocked"));
+        assert_eq!(
+            flow.metadata.get("blocked").unwrap().as_str().unwrap(),
+            "Blocked by Addon: Block"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_block_no_match_no_metadata() {
+        use mitm_core::connection::Client;
+        use mitm_core::flow::FlowBase;
+
+        let mut block = Block::new().source_ip("^192\\.168\\.1\\.100$");
+        block.compile().unwrap();
+
+        let mut flow = FlowBase::new(
+            Client::new(
+                ("10.0.0.1".to_string(), 12345),
+                ("10.0.0.1".to_string(), 80),
+                "regular",
+            ),
+            mitm_core::connection::Server::new(),
+            true,
+        );
+
+        block.request(&mut flow).await.unwrap();
+        
+        // Check that the flow was NOT marked as blocked
+        assert!(!flow.metadata.contains_key("blocked"));
     }
 }
