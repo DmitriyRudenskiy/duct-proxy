@@ -128,39 +128,109 @@ impl TunnelHandler {
 pub struct HttpForwarder;
 
 impl HttpForwarder {
-    /// Forward an HTTP request to upstream and return the response.
+    /// Forward an HTTP request to upstream and write response back to client.
     pub async fn forward(
         &self,
-        mut client_stream: TcpStream,
-        addr: SocketAddr,
-    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-        // Read HTTP request
-        let mut buf = vec![0u8; 65536];
-        let n = client_stream.read(&mut buf).await?;
-        let request = std::str::from_utf8(&buf[..n])?;
-
-        debug!("Received HTTP request ({} bytes):\n{}", n, request);
-
-        // TODO: Full implementation would parse the request, connect to upstream,
-        // forward the request, read the response, and write it back to client.
-        // For now, return a stub response to avoid empty reply.
-        debug!("Stub response (full forwarding not yet implemented)");
-
-        let response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 12\r\n\r\nHello, world!";
-        client_stream.write_all(response.as_bytes()).await?;
-
+        client_stream: &mut TcpStream,
+        request_bytes: &[u8],
+    ) -> Result<(), crate::error::ProxyError> {
+        // 1. Parse request line to get host
+        let request_str = String::from_utf8_lossy(request_bytes);
+        let first_line = request_str.lines().next().unwrap_or("");
+        // "GET http://example.com/path HTTP/1.1"
+        let parts: Vec<&str> = first_line.split_whitespace().collect();
+        if parts.len() < 2 {
+            return Err(crate::error::ProxyError::InvalidRequest("malformed request line".into()));
+        }
+        let url = parts[1];
+        
+        // 2. Extract host:port from URL
+        let host_port = url
+            .trim_start_matches("http://")
+            .split('/')
+            .next()
+            .unwrap_or("example.com:80");
+        let addr = if host_port.contains(':') {
+            host_port.to_string()
+        } else {
+            format!("{}:80", host_port)
+        };
+        
+        tracing::info!("Forwarding to upstream: {}", addr);
+        
+        // 3. Connect to upstream
+        let mut upstream = TcpStream::connect(&addr).await
+            .map_err(|e| crate::error::ProxyError::UpstreamConnect(e.to_string()))?;
+        
+        // 4. Rewrite request: absolute URL → relative path
+        let path = url
+            .trim_start_matches("http://")
+            .find('/')
+            .map(|i| &url[url.find("://").unwrap() + 3 + i..])
+            .unwrap_or("/");
+        let rewritten = request_str.replacen(url, path, 1);
+        
+        // 5. Send request to upstream
+        upstream.write_all(rewritten.as_bytes()).await
+            .map_err(|e| crate::error::ProxyError::UpstreamWrite(e.to_string()))?;
+        upstream.flush().await
+            .map_err(|e| crate::error::ProxyError::UpstreamWrite(e.to_string()))?;
+        
+        tracing::debug!("Request sent to upstream ({} bytes)", rewritten.len());
+        
+        // 6. Read response from upstream
+        let mut response_buf = vec![0u8; 65536];
+        let mut total = Vec::new();
+        loop {
+            let n = upstream.read(&mut response_buf).await
+                .map_err(|e| crate::error::ProxyError::UpstreamRead(e.to_string()))?;
+            if n == 0 { break; }
+            total.extend_from_slice(&response_buf[..n]);
+            // Simple heuristic: if we've received headers + body
+            if total.windows(4).any(|w| w == b"\r\n\r\n") {
+                // Check Content-Length
+                let header_end = total.windows(4).position(|w| w == b"\r\n\r\n").unwrap();
+                let headers = String::from_utf8_lossy(&total[..header_end]);
+                if let Some(cl) = headers.lines().find(|l| l.to_lowercase().starts_with("content-length:")) {
+                    if let Ok(cl) = cl[15..].trim().parse::<usize>() {
+                        if total.len() >= header_end + 4 + cl {
+                            break;
+                        }
+                    }
+                }
+                // If no Content-Length, wait for more data (simplified)
+                if total.len() < header_end + 4 + 100 {
+                    continue;
+                }
+            }
+        }
+        
+        tracing::debug!("Response received from upstream ({} bytes)", total.len());
+        
+        // 7. Write response to client
+        client_stream.write_all(&total).await
+            .map_err(|e| crate::error::ProxyError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+        client_stream.flush().await
+            .map_err(|e| crate::error::ProxyError::Io(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())))?;
+        
         // Per-flow logging
+        let status = if let Some(pos) = total.windows(12).position(|w| w == b"HTTP/1.1 ") {
+            String::from_utf8_lossy(&total[pos+9..pos+12]).trim().parse::<u16>().unwrap_or(0)
+        } else {
+            0
+        };
+        
         tracing::info!(
-            method = "GET",
-            url = "http://example.com/",
-            status = 200u16,
+            method = %parts.get(0).unwrap_or(&"UNKNOWN"),
+            url = url,
+            status = status,
             "{} {} → {}",
-            "GET",
-            "http://example.com/",
-            200
+            parts.get(0).unwrap_or(&"UNKNOWN"),
+            url,
+            status
         );
-
-        info!("Sent HTTP response (stub) to {}", addr);
+        
+        info!("Sent HTTP response ({} bytes) to {}", total.len(), addr);
         Ok(())
     }
 }
@@ -191,7 +261,15 @@ pub async fn handle_connection(
         }
         Protocol::Http => {
             info!("HTTP request from {}", addr);
-            HttpForwarder.forward(stream, addr).await
+            // Read the HTTP request first
+            let mut buf = vec![0u8; 65536];
+            let n = stream.read(&mut buf).await
+                .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
+            
+            // Forward the request to upstream
+            HttpForwarder.forward(&mut stream, &buf[..n]).await
+                .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> { e.into() })?;
+            Ok(())
         }
         Protocol::Raw => {
             info!("Raw TCP connection from {}", addr);

@@ -28,4 +28,16 @@ pub enum ProxyError {
 
     #[error("Connection error: {0}")]
     Connection(String),
+
+    #[error("Invalid request: {0}")]
+    InvalidRequest(String),
+
+    #[error("Upstream connect failed: {0}")]
+    UpstreamConnect(String),
+
+    #[error("Upstream write failed: {0}")]
+    UpstreamWrite(String),
+
+    #[error("Upstream read failed: {0}")]
+    UpstreamRead(String),
 }

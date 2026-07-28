@@ -51,6 +51,15 @@
 - [x] 8.3 Log CONNECT tunnels: CONNECT host:port → TLS intercepted
 - [x] 8.4 Integrate logger with proxy event hooks (in handler.rs)
 
+## 9. Real HTTP Forwarding
+
+- [x] 9.1 Implement real HTTP forwarding in HttpForwarder::forward()
+- [x] 9.2 Parse request to extract host and path
+- [x] 9.3 Connect to upstream server
+- [x] 9.4 Rewrite request (absolute URL → relative path)
+- [x] 9.5 Read response from upstream and write to client
+- [x] 9.6 Add debug logging for each step
+
 ## 9. Dump Mode Integration
 
 - [ ] 9.1 Create FlowWriter when --dump is specified
