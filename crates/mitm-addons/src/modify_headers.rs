@@ -106,6 +106,7 @@ impl ModifyHeaders {
     }
 
     /// Apply actions to a headers map (helper method for testing).
+    #[allow(dead_code)]
     fn apply_to_headers(&self, headers: &mut HashMap<String, String>) {
         // Apply exact name actions first.
         for action in &self.actions {
@@ -154,6 +155,7 @@ impl ModifyHeaders {
     }
 
     /// Apply a single action to the headers map.
+    #[allow(dead_code)]
     fn apply_action(&self, headers: &mut HashMap<String, String>, action: &HeaderAction) {
         match action {
             HeaderAction::Add { name, value } => {

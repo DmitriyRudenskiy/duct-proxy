@@ -35,7 +35,7 @@ fn decode_pem_key(pem_bytes: &[u8]) -> Result<Vec<u8>, ProxyError> {
 /// * `ca` - CA root for signing leaf certificates
 /// * `cert_store` - Certificate store for caching
 /// * `upstream_override` - Optional override for upstream address (format: "host:port")
-///  If None, uses "{sni}:443"
+///   If None, uses "{sni}:443"
 pub async fn intercept_tls(
     client_tcp: TcpStream,
     ca: &CaRoot,
