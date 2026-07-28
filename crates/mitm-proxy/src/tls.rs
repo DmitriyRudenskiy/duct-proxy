@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use rustls::pki_types::{CertificateDer, PrivateKeyDer, ServerName};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer, ServerName};
 use rustls::ServerConfig;
 use tokio::net::TcpStream;
 use tokio_rustls::TlsAcceptor;
@@ -13,6 +13,14 @@ use mitm_certs::store::CertStore;
 
 use crate::error::ProxyError;
 
+/// Decode PEM-encoded PKCS8 private key to DER bytes.
+fn decode_pem_key(pem_bytes: &[u8]) -> Result<Vec<u8>, ProxyError> {
+    let pem = pem::parse(pem_bytes)
+        .map_err(|e| ProxyError::TlsConfig(format!("Failed to parse PEM: {}", e)))?;
+    
+    Ok(pem.contents().to_vec())
+}
+
 /// Performs full MITM TLS interception.
 ///
 /// 1. Peek ClientHello → extract SNI
@@ -21,10 +29,18 @@ use crate::error::ProxyError;
 /// 4. TCP-connect to upstream
 /// 5. TLS-connect to upstream
 /// 6. Return both decrypted streams
+///
+/// # Arguments
+/// * `client_tcp` - TCP stream from client
+/// * `ca` - CA root for signing leaf certificates
+/// * `cert_store` - Certificate store for caching
+/// * `upstream_override` - Optional override for upstream address (format: "host:port")
+///                        If None, uses "{sni}:443"
 pub async fn intercept_tls(
     client_tcp: TcpStream,
     ca: &CaRoot,
     cert_store: &mut CertStore,
+    upstream_override: Option<&str>,
 ) -> Result<
     (
         tokio_rustls::server::TlsStream<TcpStream>,
@@ -51,8 +67,8 @@ pub async fn intercept_tls(
         CertificateDer::from(leaf.cert_der().to_vec()),
         CertificateDer::from(ca.cert_der().to_vec()),
     ];
-    let key_der = PrivateKeyDer::try_from(leaf.key_pkcs8().to_vec())
-        .map_err(|e| ProxyError::TlsConfig(e.to_string()))?;
+    let key_der_bytes = decode_pem_key(&leaf.key_pkcs8())?;
+    let key_der = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key_der_bytes));
 
     let server_config = ServerConfig::builder()
         .with_no_client_auth()
@@ -68,7 +84,9 @@ pub async fn intercept_tls(
         .map_err(|e| ProxyError::TlsHandshake(e.to_string()))?;
 
     // ── 5. Connect to upstream (TCP + TLS) ──────────────────────────
-    let upstream_addr = format!("{}:443", sni);
+    let upstream_addr = upstream_override
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| format!("{}:443", sni));
     let upstream_tcp = TcpStream::connect(&upstream_addr).await?;
 
     let mut root_store = rustls::RootCertStore::empty();

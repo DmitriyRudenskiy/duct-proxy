@@ -20,3 +20,5 @@ http = { workspace = true }
 bytes = { workspace = true }
 indexmap = { workspace = true }
 async-trait = "0.1"
+pem = "3"
+pkcs8 = { version = "0.10", features = ["pem", "std"] }

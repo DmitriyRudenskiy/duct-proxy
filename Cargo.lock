@@ -505,6 +505,8 @@ dependencies = [
  "mitm-certs",
  "mitm-core",
  "mitm-net",
+ "pem",
+ "pkcs8",
  "rustls",
  "rustls-pki-types",
  "serde",
