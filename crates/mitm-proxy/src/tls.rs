@@ -87,7 +87,22 @@ pub async fn intercept_tls(
     let upstream_addr = upstream_override
         .map(|s| s.to_string())
         .unwrap_or_else(|| format!("{}:443", sni));
-    let upstream_tcp = TcpStream::connect(&upstream_addr).await?;
+    
+    // Happy Eyeballs: try all DNS addresses
+    let mut upstream_tcp = None;
+    for addr in tokio::net::lookup_host(&upstream_addr).await
+        .map_err(|e| ProxyError::UpstreamConnect(format!("DNS: {}", e)))? {
+        tracing::debug!("Trying upstream {}", addr);
+        match tokio::time::timeout(
+            tokio::time::Duration::from_secs(2),
+            TcpStream::connect(addr),
+        ).await {
+            Ok(Ok(s)) => { upstream_tcp = Some(s); break; }
+            _ => continue,
+        }
+    }
+    let upstream_tcp = upstream_tcp
+        .ok_or_else(|| ProxyError::UpstreamConnect("all upstream addresses failed".into()))?;
 
     let mut root_store = rustls::RootCertStore::empty();
     root_store.extend(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());

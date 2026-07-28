@@ -166,13 +166,21 @@ impl HttpForwarder {
         
         tracing::info!("Forwarding to upstream: {}", addr);
         
-        // 3. Connect to upstream with timeout
-        let mut upstream = tokio::time::timeout(
-            tokio::time::Duration::from_secs(5),
-            TcpStream::connect(&addr),
-        ).await
-            .map_err(|_| crate::error::ProxyError::UpstreamConnect(format!("timeout connecting to {}", addr)))?
-            .map_err(|e| crate::error::ProxyError::UpstreamConnect(e.to_string()))?;
+        // 3. Connect to upstream with Happy Eyeballs (try all DNS addresses)
+        let mut upstream = None;
+        for addr in tokio::net::lookup_host(&addr).await
+            .map_err(|e| crate::error::ProxyError::UpstreamConnect(format!("DNS: {}", e)))? {
+            tracing::debug!("Trying {}", addr);
+            match tokio::time::timeout(
+                tokio::time::Duration::from_secs(2),
+                TcpStream::connect(addr),
+            ).await {
+                Ok(Ok(s)) => { upstream = Some(s); break; }
+                _ => continue,
+            }
+        }
+        let mut upstream = upstream
+            .ok_or_else(|| crate::error::ProxyError::UpstreamConnect("all addresses failed".into()))?;
         
         // 4. Rewrite request: absolute URL → relative path
         let path = url
