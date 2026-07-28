@@ -8,6 +8,7 @@ members = [
     "crates/mitm-io",         # сериализация flows
     "crates/mitm-cli",        # бинарники: mitmproxy, mitmdump
     "crates/mitm-web",        # веб-интерфейс (опционально)
+    "crates/mitm-options",    # конфигурация: опции, CLI, config.yaml
 ]
 resolver = "2"
 
