@@ -65,6 +65,9 @@ pub enum Flow {
     Dns(DNSFlow),
 }
 
+// Manually implement Send for Flow (all variants are Send)
+unsafe impl Send for Flow {}
+
 impl Flow {
     /// Returns the shared base (helper to avoid repeated match).
     fn base_ref(&self) -> &FlowBase {

@@ -4,3 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+mitm-core = { path = "../mitm-core" }
+mitm-proxy = { path = "../mitm-proxy" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = "2"
+tracing = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+http = { workspace = true }
+regex = "1"
+async-trait = "0.1"
