@@ -35,7 +35,7 @@ fn decode_pem_key(pem_bytes: &[u8]) -> Result<Vec<u8>, ProxyError> {
 /// * `ca` - CA root for signing leaf certificates
 /// * `cert_store` - Certificate store for caching
 /// * `upstream_override` - Optional override for upstream address (format: "host:port")
-///                        If None, uses "{sni}:443"
+///  If None, uses "{sni}:443"
 pub async fn intercept_tls(
     client_tcp: TcpStream,
     ca: &CaRoot,
@@ -67,7 +67,7 @@ pub async fn intercept_tls(
         CertificateDer::from(leaf.cert_der().to_vec()),
         CertificateDer::from(ca.cert_der().to_vec()),
     ];
-    let key_der_bytes = decode_pem_key(&leaf.key_pkcs8())?;
+    let key_der_bytes = decode_pem_key(leaf.key_pkcs8())?;
     let key_der = PrivateKeyDer::Pkcs8(PrivatePkcs8KeyDer::from(key_der_bytes));
 
     let server_config = ServerConfig::builder()
