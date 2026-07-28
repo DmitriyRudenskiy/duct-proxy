@@ -17,6 +17,7 @@ pub mod handler;
 pub mod hooks;
 pub mod server;
 pub mod stream;
+pub mod tls;
 pub mod websocket;
 
 // Re-exports.
@@ -26,6 +27,7 @@ pub use handler::{detect_protocol, Protocol, TunnelHandler, HttpForwarder};
 pub use hooks::{HookDispatcher, HttpRequestHook, HttpResponseHook, ErrorHook};
 pub use server::ProxyServer;
 pub use stream::{TCPMessage, UDPMessage};
+pub use tls::{MitmTlsInterceptor, TlsInterceptionResult};
 pub use websocket::{WebSocketData, WebSocketMessage, WebSocketOpcode};
 
 // Re-export core and net for convenience.

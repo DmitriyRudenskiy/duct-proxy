@@ -9,11 +9,12 @@ mitm-net = { path = "../mitm-net" }
 mitm-certs = { path = "../mitm-certs" }
 serde = { workspace = true }
 serde_json = { workspace = true }
-tokio = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["full"] }
 http = { workspace = true }
 bytes = { workspace = true }
 tracing = { workspace = true }
 rustls = { workspace = true }
+rustls-native-certs = "0.8"
 indexmap = { workspace = true }
 thiserror = "2"
 async-trait = "0.1"

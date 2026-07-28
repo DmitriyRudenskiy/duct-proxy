@@ -150,7 +150,13 @@ pub async fn handle_connection(
     match protocol {
         Protocol::Tls => {
             info!("TLS connection from {}", addr);
-            // TLS interception would go here
+            // Perform TLS interception (MITM)
+            // For now, we just accept the connection and wait for data
+            let mut buf = vec![0u8; 4096];
+            match stream.read(&mut buf).await {
+                Ok(n) => info!("Read {} bytes from TLS connection", n),
+                Err(e) => error!("TLS read error: {}", e),
+            }
             Ok(())
         }
         Protocol::HttpConnect => {
